@@ -31,6 +31,7 @@ only paint what they are handed.
 | `src/MainWindow.{h,cpp}` | Owns the timers; diffs `evaluateAlerts` between samples so the event log records raise, severity change and clear ("…nominal"). Hotkeys, selection, panel focus. |
 | `src/SiteCard.{h,cpp}` | Per-airport card (ICAO, badge, city/country, local clock, arrivals/departures, updated-ago), custom `QPainter`; metadata arrives via `setAirport()`. |
 | `src/widgets/TrendChart.{h,cpp}` | Dual-scale history trace for the selected site. |
+| `src/widgets/FlightTable.{h,cpp}` | Custom-painted sortable/filterable/virtualized table for one `FlightBoard` (`setBoard(ptr, mode)`, `setFilter`, `refreshTick`). Row model, filter and sort are rebuilt on change only; `paintEvent` draws just the visible rows. Unknown board paints a dashed gap panel, known-but-empty paints "no flights in window"; no timers. |
 | `src/EventLog.{h,cpp}` | Timestamped UTC log, capped at 300 lines. |
 | `src/AdminDialog.{h,cpp}` | Roster editor (table + form). ICAO-only Add/Update, duplicate rejection, ENABLED/PINNED/poll-interval editing, IATA→ICAO hint (`iataToIcao()` in `src/AirportSearch`). Only stylesheet user. |
 | `src/widgets/Panel`, `ExpandButton`, `BodySplitter` | Captioned card chrome, caption-corner expand, draggable body seam. |
