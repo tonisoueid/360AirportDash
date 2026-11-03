@@ -54,6 +54,9 @@ public:
     void setBaseUrl(const QString &url) { m_baseUrl = url; }
     void setRetryDelayMs(int ms) { m_retryDelayMs = ms; }
 
+    // True only while a real 429 Retry-After pause is in force.
+    bool rateLimitPaused() const;
+
     static constexpr int kWindowSecs = 24 * 3600;   // trailing board window
     static constexpr int kMax429Retries = 3;        // per board, then fail
     static constexpr int kRefreshSecs = 900;   // scheduled sweep every 15 min
@@ -64,6 +67,7 @@ signals:
     void scanProgress(int done, int total);
     void linkStatusChanged(bool online);
     void sitesReconfigured();             // roster swapped; indexes are new
+    void rateLimitPausedChanged(bool paused);   // 429 pause began / lapsed
 
     // Airport-directory hooks (see docs/architecture.md "Airport learning").
     // Emitted only when the feed actually reports something.
@@ -126,6 +130,7 @@ private:
     void completeJob(const std::shared_ptr<PollJob> &job);
     void advanceScan();
     void finishPoll(int idx);             // scan-queue bookkeeping + signal
+    void syncPauseState();                // emit on pause edge, arm lapse timer
 
     QVector<SiteData> m_data;
     QNetworkAccessManager m_net;          // transfer timeout armed in the ctor
@@ -133,7 +138,9 @@ private:
     QString m_baseUrl;                    // OpenSky REST base (no trailing slash)
     int m_retryDelayMs = 2000;            // pause before the single 5xx retry
     qint64 m_blockedUntilMs = 0;          // global 429 back-off (epoch ms)
-    QVector<PollState> m_poll;            // parallel to m_data
+    QTimer m_pauseTimer;                  // fires when the 429 pause lapses
+    bool m_pauseReported = false;         // last value emitted
+    QVector<PollState> m_poll;           // parallel to m_data
     QTimer m_scanTimer;                   // walks the staggered sweep
     int m_scanCursor = 0;
     int m_scanQueueRemaining = 0;

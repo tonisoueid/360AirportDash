@@ -120,6 +120,25 @@ console always boots.
 - A roster swap bumps the generation counter and cancels the per-site
   timers; late replies are dropped. `--offline` never starts polling.
 
+- **Pause signal**: `rateLimitPaused()` is true only while a real 429
+  `Retry-After` pause is in force; `rateLimitPausedChanged(bool)` fires on
+  the begin and lapse edges (a single-shot timer covers the lapse).
+  `MainWindow` refreshes every card on it.
+- **Boards stamp**: `SiteData::boardsFetchedUtc` is set in `applySample` only
+  when at least one board is measured (`known`); a failure never touches it.
+
+### Card badge state (`cardBadge(SiteData, paused)`)
+
+Derived, never stored. Evaluated in this order:
+
+1. `Paused` — pause active and the site is not `Live` (no fresh data).
+2. `Stale` / `Error` — the matching `SiteData::State`.
+3. `Pending` — never polled (also `Live` with no known board: a gap, not a claim).
+4. `Live` — at least one *known* board holds flights.
+5. `Quiet` — at least one known board, and every known board is empty.
+
+`known=false` boards are skipped, never counted as zero flights.
+
 ### Airport learning (feed hook)
 
 `AirportRegistry` (airports.json, seeded from the compiled-in table) is
