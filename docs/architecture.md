@@ -23,7 +23,8 @@ only paint what they are handed.
 
 | File | Role |
 |---|---|
-| `src/SiteData.h` | Data model (`Site`, `Sample`, `SiteData`), default roster, watch rules (`evaluateAlerts`). Everything downstream follows its missing-data convention. |
+| `src/OpenSkyParse.h/.cpp` | Pure OpenSky `/flights/arrival` / `/flights/departure` parser (`parseBoard`); 404 + `[]` is a known-empty board; reports ICAOs seen for `airportSeen()`. No networking. |
+| `src/SiteData.h` | Data model (`Site`, `Sample`, `FlightBoard`, `SiteData`), default roster, watch rules (`evaluateAlerts`). Everything downstream follows its missing-data convention. |
 | `src/SiteRegistry.{h,cpp}` | Editable roster persisted as `sites.json` in `QStandardPaths::AppConfigLocation`. `setSites()` normalizes → validates → persists (`QSaveFile`) → emits. |
 | `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **Ships as a documented stub — the feed seam.** |
 | `src/MainWindow.{h,cpp}` | Owns the timers; diffs `evaluateAlerts` between samples so the event log records raise, severity change and clear ("…nominal"). Hotkeys, selection, panel focus. |
