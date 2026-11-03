@@ -175,3 +175,12 @@ rules:
   `GlyphPaint::draw(Glyph::None)`), never zero.
 - Icons: paste verbatim Bootstrap Icons 1.11.3 `d` data into
   `src/widgets/IconGlyph.h` with a new enum entry; never freehand geometry.
+
+## Flight boards on `Sample`
+
+`Sample::arrivals` / `Sample::departures` are `FlightBoard`s with a `known`
+flag. `known=false` (the default) means unmeasured or failed — render gaps,
+never zero. `known=true` with no flights is a real empty board. Fill them with
+`parseBoard(httpStatus, body, &board, &err, &icaos)` from `OpenSkyParse.h`
+(HTTP 404 with body `[]` is a valid empty board), then call
+`airportSeen()` for each ICAO in `icaos`.

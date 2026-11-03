@@ -38,6 +38,24 @@ inline bool operator==(const Site &a, const Site &b)
         && a.pinned == b.pinned && a.pollIntervalSecs == b.pollIntervalSecs;
 }
 
+// One flight on an arrival/departure board (OpenSky). Text fields are empty
+// when the feed reported null; firstSeen/lastSeen are invalid when absent.
+struct FlightEntry {
+    QString   icao24;          // transponder address, lowercase hex
+    QString   callsign;        // trimmed; empty when unknown
+    QString   estDepartureIcao;   // estimated departure airport; empty = unknown
+    QString   estArrivalIcao;     // estimated arrival airport; empty = unknown
+    QDateTime firstSeen;       // UTC; invalid when absent
+    QDateTime lastSeen;        // UTC; invalid when absent
+};
+
+// A board is tri-state: !known = never measured / failed (render gaps, NOT
+// zero flights); known && flights.isEmpty() = measured, nothing flew.
+struct FlightBoard {
+    bool known = false;
+    QVector<FlightEntry> flights;
+};
+
 // One measurement of one site. Doubles start NaN, ints start -1; every
 // consumer must check before use.
 struct Sample {
@@ -45,6 +63,8 @@ struct Sample {
     double loadPct    = std::nan(""); // primary metric, 0–100
     double latencyMs  = std::nan(""); // network / secondary metric
     int    sessions   = -1;           // tertiary count
+    FlightBoard arrivals;             // default: unknown (known=false)
+    FlightBoard departures;           // default: unknown (known=false)
 };
 
 struct SiteData {
