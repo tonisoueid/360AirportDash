@@ -95,6 +95,9 @@ window). Short version:
   "updated N min ago" (none without a fetch). `MainWindow::refreshCard()`
   feeds it data, pause state and `AirportRegistry::find()` metadata; clock
   and age repaint only on the minute gate.
+- **`src/widgets/FlightTable`** — custom-painted sortable/filterable/virtualized
+  table for one `FlightBoard` (`setBoard(ptr, mode)`, `setFilter`, `refreshTick`);
+  model rebuilt on change, paints visible rows only, explicit gap vs empty states.
 - **`src/SiteRegistry`** — roster persisted as `sites.json` (QSaveFile,
   corrupt → defaults). **Site indexes change after a swap
   (`sitesReconfigured`) — never cache indexes across it.**
