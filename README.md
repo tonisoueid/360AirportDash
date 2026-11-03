@@ -31,9 +31,6 @@ live.
   counts, a status badge (live / quiet / stale / error / paused) and an
   "updated N min ago" stamp. Unknown values render `---` and a missing
   time zone or fetch draws nothing — **measured, never invented**.
-- **Analysis trace** — dual-scale history chart (two series, independent
-  axes), subtle graticule, dashed LATEST cursor with chip readout,
-  MIN/MAX annotations, self-describing legend.
 - **Event log** — timestamped UTC NOC log; watch rules log on raise, on
   severity change ("raised to CRITICAL" / "lowered to WARNING") and on
   clearing ("…nominal"), severity color-coded.

@@ -82,7 +82,7 @@ offscreen) in the container before it is written. macOS is not a target.
 ## Architecture
 
 Data flows one way: `SiteRegistry` (roster) → `FeedService` (polling) →
-`MainWindow` (alert diffing, wiring) → `SiteCard` (one per airport) / `TrendChart` / `EventLog`
+`MainWindow` (alert diffing, wiring) → `SiteCard` (one per airport) / `DetailPane` / `EventLog`
 (painting). Details and rationale: **docs/architecture.md** (patterns: the
 feed seam, generation counter, stale semantics, alert diffing, history
 window). Short version:

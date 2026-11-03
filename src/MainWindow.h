@@ -9,7 +9,6 @@
 
 class EventLog;
 class SiteCard;
-class TrendChart;
 class DetailPane;
 class Panel;
 class ExpandButton;
@@ -27,7 +26,6 @@ class AirportRegistry;
 //   header   — masthead, UTC clock, LIVE badge, scan progress, link state,
 //              SITE ADMIN button (roster editor, also Ctrl+E)
 //   matrix   — site matrix (watched sites, clickable)
-//   trace    — analysis trace for the selected site (scope)
 //   detail   — selected airport: header + arrivals/departures tables (storage only)
 //   log      — event log with raise/clear watch rules
 //   footer   — fleet status: live count, sync time, next-scan countdown, uptime
@@ -64,7 +62,7 @@ private slots:
 private:
     // Which body panel (if any) is blown up to fill the whole console body.
     // None = the normal three-panel layout.
-    enum class SectionFocus { None, Grid, Trace, Detail, Log };
+    enum class SectionFocus { None, Grid, Detail, Log };
 
     QWidget *buildHeader();
     QWidget *buildStatusBar();
@@ -91,7 +89,6 @@ private:
     QSplitter *m_body = nullptr;
     QWidget *m_rightCol = nullptr;
     ExpandButton *m_gridBtn = nullptr;
-    ExpandButton *m_traceBtn = nullptr;
     ExpandButton *m_logBtn = nullptr;
     ExpandButton *m_detailBtn = nullptr;
     DetailPane *m_detail = nullptr;
@@ -102,8 +99,6 @@ private:
     QVector<QHash<QString, Alert::Sev>> m_activeAlerts;   // per site: rule key -> last severity
     QVector<bool> m_announcedOnline;
     EventLog *m_log = nullptr;
-    TrendChart *m_scope = nullptr;
-    Panel *m_scopePanel = nullptr;
     Panel *m_gridPanel = nullptr;
     Panel *m_logPanel = nullptr;
     int m_eventCount = 0;

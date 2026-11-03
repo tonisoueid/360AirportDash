@@ -8,7 +8,7 @@ beyond Qt 6 (Widgets + Network).
 ## Data flow (one direction only)
 
 ```
-SiteRegistry ──► FeedService ──► MainWindow ──► SiteCard / TrendChart / EventLog
+SiteRegistry ──► FeedService ──► MainWindow ──► SiteCard / DetailPane / EventLog
    (roster)      (polling)       (wiring:
                                   timers, alert
                                   diffing, selection)
@@ -30,7 +30,6 @@ only paint what they are handed.
 | `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **`pollSite()` is wired to OpenSky** (departures; arrivals too when `OpenSkyAuth` has credentials, otherwise a gap): sequential per-site requests, 429 `Retry-After` pause (global) and 5xx single retry; partial results leave the failed board unknown; every poll ends in one `applySample`/`applyFailure`. |
 | `src/MainWindow.{h,cpp}` | Owns the timers; diffs `evaluateAlerts` between samples so the event log records raise, severity change and clear ("…nominal"). Hotkeys, selection, panel focus. |
 | `src/SiteCard.{h,cpp}` | Per-airport card (ICAO, badge, city/country, local clock, arrivals/departures, updated-ago), custom `QPainter`; metadata arrives via `setAirport()`. |
-| `src/widgets/TrendChart.{h,cpp}` | Dual-scale history trace for the selected site. |
 | `src/widgets/FlightTable.{h,cpp}` | Custom-painted sortable/filterable/virtualized table for one `FlightBoard` (`setBoard(ptr, mode)`, `setFilter`, `refreshTick`). Row model, filter and sort are rebuilt on change only; `paintEvent` draws just the visible rows. Unknown board paints a dashed gap panel, known-but-empty paints "no flights in window"; no timers. |
 | `src/widgets/DetailPane.{h,cpp}` | Selected-airport pane: custom-painted header + shared filter + Arrivals/Departures `FlightTable`s. Reads stored boards only (`setSite(View)` / `clear()` / minute `tick()`); REFRESH emits `refreshRequested`, wired in `MainWindow::onDetailRefresh` to `FeedService::refreshSite()` by ICAO. Re-bound by site code after a roster swap. |
 | `src/EventLog.{h,cpp}` | Timestamped UTC log, capped at 300 lines. |
@@ -76,7 +75,7 @@ reply can outlive the state that issued it. Consequences:
 ### History window
 
 `applySample()` appends to `SiteData::recent`, capped at `kHistoryCap`
-(default 48). Everything historical — trend chart, trend
+(default 48). Everything historical — trend
 watch rules — reads that window; nothing else keeps its own buffer.
 
 ### Alert diffing (raise / severity-change / clear)
@@ -163,8 +162,7 @@ no match → gaps) into `SiteCard`, on site updates, pause edges and
 text (no flags), a clock only when `Airport::timeZone` is a valid
 `QTimeZone`, `---` for any `known=false` board, and the "updated" stamp only
 when `boardsFetchedUtc` is valid. Clock and age are read at paint time and
-repaint only on the minute gate. `TrendChart` is unaffected (it still reads
-the history); the old load gauge/sparkline were removed from the card.
+repaint only on the minute gate. The old load gauge/sparkline were removed from the card.
 
 ### Airport learning (feed hook)
 
