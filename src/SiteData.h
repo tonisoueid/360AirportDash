@@ -17,18 +17,25 @@
 // See docs/recipes.md "Add a data domain".
 // ----------------------------------------------------------------------------
 
+// Default per-entry poll interval (matches FeedService::kRefreshSecs).
+inline constexpr int kDefaultPollSecs = 900;
+
 struct Site {
-    QString name;      // "EDGE-FRANKFURT"
-    QString code;      // short unique id, "FRA1"
+    QString name;      // display label, "FRANKFURT"
+    QString code;      // ICAO airport code, exactly 4 letters A-Z, "EDDF"
     QString region;    // "EU"
     QString endpoint;  // feed locator — URL, host:port, device id… whatever
                        // your FeedService poll understands (may be empty)
+    bool enabled = true;                   // watched / polled
+    bool pinned = false;                   // kept at the top of the watchlist
+    int  pollIntervalSecs = kDefaultPollSecs;   // per-entry poll interval
 };
 
 inline bool operator==(const Site &a, const Site &b)
 {
     return a.name == b.name && a.code == b.code && a.region == b.region
-        && a.endpoint == b.endpoint;
+        && a.endpoint == b.endpoint && a.enabled == b.enabled
+        && a.pinned == b.pinned && a.pollIntervalSecs == b.pollIntervalSecs;
 }
 
 // One measurement of one site. Doubles start NaN, ints start -1; every
@@ -83,14 +90,14 @@ struct SiteData {
 inline const QVector<Site> &siteList()
 {
     static const QVector<Site> sites = {
-        {"EDGE-FRANKFURT", "FRA1", "EU", "https://example.com/api/v1/nodes/fra1"},
-        {"EDGE-LONDON",    "LHR1", "EU", "https://example.com/api/v1/nodes/lhr1"},
-        {"EDGE-NEW-YORK",  "JFK1", "US-EAST",   "https://example.com/api/v1/nodes/jfk1"},
-        {"EDGE-DALLAS",    "DFW1", "US-CENTRAL","https://example.com/api/v1/nodes/dfw1"},
-        {"EDGE-SAO-PAULO", "GRU1", "LATAM",     "https://example.com/api/v1/nodes/gru1"},
-        {"EDGE-CAPE-TOWN", "CPT1", "AFRICA",    "https://example.com/api/v1/nodes/cpt1"},
-        {"EDGE-SINGAPORE", "SIN1", "APAC",      "https://example.com/api/v1/nodes/sin1"},
-        {"EDGE-SYDNEY",    "SYD1", "APAC",      "https://example.com/api/v1/nodes/syd1"},
+        {"FRANKFURT", "EDDF", "EU", "https://example.com/api/v1/nodes/fra1"},
+        {"LONDON HEATHROW", "EGLL", "EU", "https://example.com/api/v1/nodes/lhr1"},
+        {"NEW YORK JFK", "KJFK", "US-EAST",   "https://example.com/api/v1/nodes/jfk1"},
+        {"DALLAS FORT WORTH", "KDFW", "US-CENTRAL","https://example.com/api/v1/nodes/dfw1"},
+        {"SAO PAULO GUARULHOS", "SBGR", "LATAM",     "https://example.com/api/v1/nodes/gru1"},
+        {"CAPE TOWN", "FACT", "AFRICA",    "https://example.com/api/v1/nodes/cpt1"},
+        {"SINGAPORE CHANGI", "WSSS", "APAC",      "https://example.com/api/v1/nodes/sin1"},
+        {"SYDNEY", "YSSY", "APAC",      "https://example.com/api/v1/nodes/syd1"},
     };
     return sites;
 }

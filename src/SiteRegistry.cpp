@@ -13,6 +13,18 @@
 namespace {
 constexpr int kMinSites = 1;
 constexpr int kMaxSites = 60;
+constexpr int kMinPollSecs = 60;
+constexpr int kMaxPollSecs = 86400;
+
+bool isIcao(const QString &c)
+{
+    if (c.size() != 4)
+        return false;
+    for (const QChar ch : c)
+        if (ch < QLatin1Char('A') || ch > QLatin1Char('Z'))
+            return false;
+    return true;
+}
 }
 
 SiteRegistry::SiteRegistry(QObject *parent)
@@ -48,10 +60,13 @@ QString SiteRegistry::validateList(const QVector<Site> &list)
         const Site s = normalized(raw);
         if (s.name.isEmpty())
             return QStringLiteral("site with empty name");
-        if (s.code.isEmpty())
-            return QStringLiteral("%1 has an empty code").arg(s.name);
+        if (!isIcao(s.code))
+            return QStringLiteral("%1: ICAO code must be exactly 4 letters A-Z").arg(s.name);
+        if (s.pollIntervalSecs < kMinPollSecs || s.pollIntervalSecs > kMaxPollSecs)
+            return QStringLiteral("%1: poll interval must be %2-%3 s")
+                .arg(s.code).arg(kMinPollSecs).arg(kMaxPollSecs);
         if (seenCodes.contains(s.code))
-            return QStringLiteral("duplicate code %1").arg(s.code);
+            return QStringLiteral("duplicate ICAO %1").arg(s.code);
         seenCodes.insert(s.code);
     }
     return QString();
@@ -79,6 +94,10 @@ SiteRegistry::LoadResult SiteRegistry::load()
         s.code = o.value("code").toString();
         s.region = o.value("region").toString();
         s.endpoint = o.value("endpoint").toString();
+        // Fields added later: absent in older files -> defaults.
+        s.enabled = o.value("enabled").toBool(true);
+        s.pinned = o.value("pinned").toBool(false);
+        s.pollIntervalSecs = o.value("pollIntervalSecs").toInt(kDefaultPollSecs);
         parsed.push_back(s);
     }
     if (!validateList(parsed).isEmpty())
@@ -99,10 +118,13 @@ bool SiteRegistry::save() const
         o.insert("code", s.code);
         o.insert("region", s.region);
         o.insert("endpoint", s.endpoint);
+        o.insert("enabled", s.enabled);
+        o.insert("pinned", s.pinned);
+        o.insert("pollIntervalSecs", s.pollIntervalSecs);
         arr.append(o);
     }
     QJsonObject root;
-    root.insert("version", 1);
+    root.insert("version", 2);
     root.insert("sites", arr);
 
     const QString path = configPath();

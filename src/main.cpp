@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
                     e->setText(v);
             };
             set("nameEdit", QStringLiteral("EDGE-OSLO"));
-            set("codeEdit", QStringLiteral("OSL1"));
+            set("codeEdit", QStringLiteral("ENGM"));
             set("regionEdit", QStringLiteral("EU"));
             set("endpointEdit", QStringLiteral("https://example.com/api/v1/nodes/osl1"));
             if (auto *b = dlg->findChild<QPushButton *>(QStringLiteral("addButton")))
