@@ -2,9 +2,11 @@
 #include "AdminDialog.h"
 #include "AirportRegistry.h"
 #include "EventLog.h"
+#include "OpenSkyAuth.h"
 #include "SiteCard.h"
 #include "SiteRegistry.h"
 #include "Theme.h"
+#include "widgets/DetailPane.h"
 #include "widgets/Panel.h"
 #include "widgets/TrendChart.h"
 
@@ -12,6 +14,7 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSet>
@@ -62,7 +65,7 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
     connect(m_service, &FeedService::linkStatusChanged, this, &MainWindow::onLinkStatus);
     // Pause edge: refresh every card so the PAUSED badge appears / clears.
     connect(m_service, &FeedService::rateLimitPausedChanged, this,
-            [this](bool) { refreshAllCards(); });
+            [this](bool) { refreshAllCards(); refreshDetail(); });
     connect(m_service, &FeedService::sitesReconfigured, this, &MainWindow::rebuildSiteGrid);
     connect(m_registry, &SiteRegistry::sitesChanged, this, [this] {
         m_service->setSites(m_registry->sites());
@@ -79,7 +82,7 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
         m_airports->clearRefill();
     });
     connect(m_airports, &AirportRegistry::airportsChanged, this,
-            &MainWindow::refreshAllCards);
+            [this] { refreshAllCards(); refreshDetail(); });
     if (m_airports->needsRefill() && !m_offline)
         m_service->requestAirportFill();
 
@@ -145,13 +148,26 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
     m_scopePanel->setObjectName(QStringLiteral("scopePanel"));
     m_scope = new TrendChart;
     m_scopePanel->contentLayout()->addWidget(m_scope);
-    rightLay->addWidget(m_scopePanel, 5);
+    rightLay->addWidget(m_scopePanel, 4);
     m_traceBtn = new ExpandButton;
     m_traceBtn->setObjectName(QStringLiteral("traceExpandBtn"));
     m_scopePanel->setCornerWidget(m_traceBtn);
     connect(m_traceBtn, &ExpandButton::toggled, this, [this](bool on) {
         setSectionFocus(on ? SectionFocus::Trace : SectionFocus::None);
     });
+
+    m_detailPanel = new Panel(QStringLiteral("Airport Detail"));
+    m_detailPanel->setObjectName(QStringLiteral("detailPanel"));
+    m_detail = new DetailPane;
+    m_detailPanel->contentLayout()->addWidget(m_detail);
+    rightLay->addWidget(m_detailPanel, 6);
+    m_detailBtn = new ExpandButton;
+    m_detailBtn->setObjectName(QStringLiteral("detailExpandBtn"));
+    m_detailPanel->setCornerWidget(m_detailBtn);
+    connect(m_detailBtn, &ExpandButton::toggled, this, [this](bool on) {
+        setSectionFocus(on ? SectionFocus::Detail : SectionFocus::None);
+    });
+    connect(m_detail, &DetailPane::refreshRequested, this, &MainWindow::onDetailRefresh);
 
     m_logPanel = new Panel(QStringLiteral("Event Log — Watch Rules Active"));
     m_logPanel->setObjectName(QStringLiteral("logPanel"));
@@ -365,6 +381,7 @@ void MainWindow::onSecondTick()
         for (SiteCard *c : m_cards)
             if (c->isVisible())
                 c->update();
+        m_detail->tick();
     }
     refreshStatusText();
 }
@@ -383,6 +400,8 @@ void MainWindow::onSiteUpdated(int idx)
 {
     const SiteData &d = m_service->data(idx);
     refreshCard(idx);
+    if (idx == m_selected)
+        refreshDetail();
     if (d.state == SiteData::State::Live && idx < m_announcedOnline.size()
         && !m_announcedOnline[idx]) {
         m_announcedOnline[idx] = true;
@@ -444,6 +463,15 @@ void MainWindow::onLinkStatus(bool online)
 
 void MainWindow::onCardClicked(int idx)
 {
+    selectSite(idx, true);
+}
+
+// Select a site: card highlight, scope, detail pane. Storage reads only —
+// selecting never starts a fetch. `announce` = write the event-log line.
+void MainWindow::selectSite(int idx, bool announce)
+{
+    if (idx < 0 || idx >= m_cards.size() || idx >= m_service->siteCount())
+        return;
     if (m_selected >= 0 && m_selected < m_cards.size())
         m_cards[m_selected]->setSelected(false);
     m_selected = idx;
@@ -458,9 +486,79 @@ void MainWindow::onCardClicked(int idx)
         m_scopePanel->setValue(QStringLiteral("—"), Theme::TextMuted);
     }
     m_scope->setData(d);
-    m_log->log(QStringLiteral("INFO"), d.site.code,
-               QStringLiteral("Site selected for analysis"));
+    refreshDetail();
+    if (announce) {
+        m_log->log(QStringLiteral("INFO"), d.site.code,
+                   QStringLiteral("Site selected for analysis"));
+        m_eventCount = m_eventCount + 1;
+    }
+}
+
+int MainWindow::indexOfSite(const QString &code) const
+{
+    for (int i = 0; i < m_service->siteCount(); ++i)
+        if (m_service->data(i).site.code == code)
+            return i;
+    return -1;
+}
+
+// Push the selected site's STORED data into the detail pane (or its empty
+// state). Reads FeedService storage only; never polls.
+void MainWindow::refreshDetail()
+{
+    if (!m_detail)
+        return;
+    if (m_selected < 0 || m_selected >= m_service->siteCount()) {
+        m_detail->clear();
+        m_detailPanel->setTitle(QStringLiteral("Airport Detail"));
+        m_detailPanel->setValue(QStringLiteral("—"), Theme::TextMuted);
+        return;
+    }
+    const SiteData &d = m_service->data(m_selected);
+    DetailPane::View v;
+    v.data = d;
+    if (m_airports) {
+        if (const std::optional<Airport> a = m_airports->find(d.site.code))
+            v.airport = *a;
+    }
+    v.authenticated = m_service->openSkyAuth() && m_service->openSkyAuth()->hasCredentials();
+    if (m_offline) {
+        v.refreshEnabled = false;
+        v.refreshNote = QStringLiteral("Offline mode — polling is disabled");
+    } else if (m_service->rateLimitPaused()) {
+        v.refreshEnabled = false;
+        v.refreshNote = QStringLiteral("OpenSky rate limit pause in force — polling resumes automatically");
+    }
+    m_detail->setSite(v);
+    m_detailPanel->setTitle(QStringLiteral("Airport Detail — %1 · %2")
+                                .arg(d.site.name, d.site.code));
+    m_detailPanel->setValue(QStringLiteral("%1 ARR · %2 DEP")
+        .arg(d.current.arrivals.known ? QString::number(d.current.arrivals.flights.size())
+                                      : QStringLiteral("---"),
+             d.current.departures.known ? QString::number(d.current.departures.flights.size())
+                                        : QStringLiteral("---")),
+        Theme::TextSoft);
+}
+
+// Refresh button: a real poll request, resolved by site identity. The pane
+// updates only when applySample/applyFailure lands (siteUpdated).
+void MainWindow::onDetailRefresh()
+{
+    if (m_offline)
+        return;
+    const QString code = m_detail->siteCode();
+    const int idx = indexOfSite(code);
+    if (idx < 0)
+        return;
+    if (m_service->refreshSite(idx)) {
+        m_log->log(QStringLiteral("INFO"), code, QStringLiteral("Detail refresh requested"));
+    } else {
+        m_log->log(QStringLiteral("WARN"), code,
+                   QStringLiteral("Detail refresh not started — poll in flight or rate-limit pause"),
+                   Theme::Amber);
+    }
     m_eventCount = m_eventCount + 1;
+    m_logPanel->setValue(QStringLiteral("%1 EVENTS").arg(m_eventCount), Theme::TextMuted);
 }
 
 // Column count for the matrix: as many 384px-min card columns as the scroll
@@ -504,14 +602,17 @@ void MainWindow::setSectionFocus(SectionFocus f)
 
     const bool grid = f == SectionFocus::Grid;
     const bool trace = f == SectionFocus::Trace;
+    const bool detail = f == SectionFocus::Detail;
     const bool log = f == SectionFocus::Log;
-    m_gridPanel->setVisible(!trace && !log);
+    m_gridPanel->setVisible(!trace && !detail && !log);
     m_rightCol->setVisible(!grid);
-    m_scopePanel->setVisible(!log);
-    m_logPanel->setVisible(!trace);
+    m_scopePanel->setVisible(!detail && !log);
+    m_detailPanel->setVisible(!trace && !log);
+    m_logPanel->setVisible(!trace && !detail);
 
     m_gridBtn->setExpanded(grid);
     m_traceBtn->setExpanded(trace);
+    m_detailBtn->setExpanded(detail);
     m_logBtn->setExpanded(log);
 
     m_log->log(QStringLiteral("INFO"), QStringLiteral("360AirportDash"),
@@ -520,7 +621,8 @@ void MainWindow::setSectionFocus(SectionFocus f)
                    : QStringLiteral("%1 expanded to full view")
                          .arg(grid ? QStringLiteral("Site matrix")
                                    : trace ? QStringLiteral("Analysis trace")
-                                           : QStringLiteral("Event log")));
+                                           : detail ? QStringLiteral("Airport detail")
+                                                    : QStringLiteral("Event log")));
     m_eventCount = m_eventCount + 1;
     m_logPanel->setValue(QStringLiteral("%1 EVENTS").arg(m_eventCount), Theme::TextMuted);
 }
@@ -531,6 +633,9 @@ void MainWindow::setSectionFocus(SectionFocus f)
 // re-arms the watch rules for the new indexing.
 void MainWindow::rebuildSiteGrid()
 {
+    // Selection survives a roster swap by site identity (ICAO), never by the
+    // old index; a removed site falls back to the empty state.
+    const QString prevCode = m_detail ? m_detail->siteCode() : QString();
     m_gridCols = siteColumns();
     m_selected = -1;
     relayoutSiteCards();
@@ -543,6 +648,11 @@ void MainWindow::rebuildSiteGrid()
     m_scope->setData(SiteData{});
     m_scopePanel->setTitle(QStringLiteral("Analysis Trace"));
     m_scopePanel->setValue(QStringLiteral("—"), Theme::TextMuted);
+    const int keep = prevCode.isEmpty() ? -1 : indexOfSite(prevCode);
+    if (keep >= 0)
+        selectSite(keep, false);
+    else
+        refreshDetail();
 
     const int n = m_service->siteCount();
     int live = 0;
@@ -692,6 +802,17 @@ void MainWindow::runAlertRules(int idx)
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
 {
+    // A focused text field (detail filter) owns plain keys; Esc hands focus back.
+    if (qobject_cast<QLineEdit *>(focusWidget())
+        && !(e->modifiers() & Qt::ControlModifier)) {
+        if (e->key() == Qt::Key_Escape) {
+            focusWidget()->clearFocus();
+            e->accept();
+            return;
+        }
+        QMainWindow::keyPressEvent(e);
+        return;
+    }
     if (e->key() == Qt::Key_R && !m_offline) {
         m_log->log(QStringLiteral("INFO"), QStringLiteral("360AirportDash"),
                    QStringLiteral("Manual rescan requested by operator"));
