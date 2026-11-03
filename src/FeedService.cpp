@@ -25,6 +25,8 @@ FeedService::FeedService(const QVector<Site> &sites, QObject *parent)
     m_auth->loadCredentials();
     resetPollState();
     connect(&m_scanTimer, &QTimer::timeout, this, &FeedService::advanceScan);
+    m_pauseTimer.setSingleShot(true);
+    connect(&m_pauseTimer, &QTimer::timeout, this, &FeedService::syncPauseState);
 }
 
 void FeedService::setSites(const QVector<Site> &sites)
@@ -223,6 +225,7 @@ void FeedService::issueBoard(const std::shared_ptr<PollJob> &job, bool departure
             secs = qMin(secs, 3600);
             m_blockedUntilMs = qMax(m_blockedUntilMs,
                                     QDateTime::currentMSecsSinceEpoch() + qint64(secs) * 1000);
+            syncPauseState();
             if (++b.tries429 > kMax429Retries) {
                 failBoard(QStringLiteral("rate limited (HTTP 429)"));
                 return;
@@ -299,6 +302,26 @@ void FeedService::completeAirportFill()
     emit airportFillCompleted();
 }
 
+bool FeedService::rateLimitPaused() const
+{
+    return m_blockedUntilMs > QDateTime::currentMSecsSinceEpoch();
+}
+
+void FeedService::syncPauseState()
+{
+    const bool paused = rateLimitPaused();
+    if (paused) {
+        const qint64 left = m_blockedUntilMs - QDateTime::currentMSecsSinceEpoch();
+        m_pauseTimer.start(int(qMin<qint64>(left, 3600 * 1000)) + 20);
+    } else {
+        m_pauseTimer.stop();
+    }
+    if (paused != m_pauseReported) {
+        m_pauseReported = paused;
+        emit rateLimitPausedChanged(paused);
+    }
+}
+
 void FeedService::applySample(int idx, const Sample &s)
 {
     if (idx < 0 || idx >= siteCount())
@@ -312,6 +335,8 @@ void FeedService::applySample(int idx, const Sample &s)
         d.recent.remove(0, d.recent.size() - SiteData::kHistoryCap);
     d.error.clear();
     d.lastSyncUtc = QDateTime::currentDateTimeUtc();
+    if (s.arrivals.known || s.departures.known)
+        d.boardsFetchedUtc = d.lastSyncUtc;   // only a measured board counts
     d.state = SiteData::State::Live;
     if (!m_linkOnline) {
         m_linkOnline = true;

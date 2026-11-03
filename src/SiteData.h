@@ -78,6 +78,9 @@ struct SiteData {
     State state = State::Pending;
     QString error;
     QDateTime lastSyncUtc;            // when this site last answered
+    // When a poll last returned at least one measured board. Invalid until
+    // then; never touched by a failure (no fetch means no stamp).
+    QDateTime boardsFetchedUtc;
 
     bool valid() const { return state == State::Live || state == State::Stale; }
 
@@ -100,6 +103,37 @@ struct SiteData {
         return v.front() - v.back();
     }
 };
+
+// ----------------------------------------------------------------------------
+// Card badge state, derived (never stored) from what actually happened.
+//   Stale / Error  — SiteData::State, taking precedence only when no pause.
+//   Paused         — a 429 Retry-After pause is active and the site has no
+//                    fresh (Live) data.
+//   Live           — Live state, >= 1 known board holding flights.
+//   Quiet          — Live state, >= 1 known board, all known boards empty.
+//   Pending        — never polled (or Live with no known board): a gap,
+//                    not a status claim. known=false boards are never zero.
+// ----------------------------------------------------------------------------
+enum class CardBadge { Live, Quiet, Stale, Error, Paused, Pending };
+
+inline CardBadge cardBadge(const SiteData &d, bool paused)
+{
+    if (paused && d.state != SiteData::State::Live)
+        return CardBadge::Paused;
+    switch (d.state) {
+    case SiteData::State::Stale: return CardBadge::Stale;
+    case SiteData::State::Error: return CardBadge::Error;
+    case SiteData::State::Pending: return CardBadge::Pending;
+    case SiteData::State::Live: break;
+    }
+    const FlightBoard &a = d.current.arrivals;
+    const FlightBoard &b = d.current.departures;
+    if (!a.known && !b.known)
+        return CardBadge::Pending;
+    const bool anyFlights = (a.known && !a.flights.isEmpty())
+                         || (b.known && !b.flights.isEmpty());
+    return anyFlights ? CardBadge::Live : CardBadge::Quiet;
+}
 
 // ----------------------------------------------------------------------------
 // Built-in default roster — example sites standing in for your fleet. The

@@ -60,6 +60,12 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
     connect(m_service, &FeedService::siteUpdated, this, &MainWindow::onSiteUpdated);
     connect(m_service, &FeedService::scanProgress, this, &MainWindow::onScanProgress);
     connect(m_service, &FeedService::linkStatusChanged, this, &MainWindow::onLinkStatus);
+    // Pause edge: repaint every card so a badge can pick it up (painting
+    // itself lands with the card badge work).
+    connect(m_service, &FeedService::rateLimitPausedChanged, this, [this](bool) {
+        for (int i = 0; i < m_cards.size() && i < m_service->siteCount(); ++i)
+            m_cards[i]->setData(m_service->data(i));
+    });
     connect(m_service, &FeedService::sitesReconfigured, this, &MainWindow::rebuildSiteGrid);
     connect(m_registry, &SiteRegistry::sitesChanged, this, [this] {
         m_service->setSites(m_registry->sites());
