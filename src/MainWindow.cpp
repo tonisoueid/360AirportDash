@@ -8,7 +8,6 @@
 #include "Theme.h"
 #include "widgets/DetailPane.h"
 #include "widgets/Panel.h"
-#include "widgets/TrendChart.h"
 
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -96,7 +95,7 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
 
     root->addWidget(buildHeader());
 
-    // site matrix (scrollable) | draggable seam | right column: trace + log
+    // site matrix (scrollable) | draggable seam | right column: detail + log
     // The seam (BodySplitter) resizes the two sides by dragging; each panel
     // also carries a caption-corner expand control that blows it up to fill
     // the whole body, folding the other panels away (setSectionFocus).
@@ -139,28 +138,16 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
 
     m_rightCol = new QWidget;
     m_rightCol->setObjectName(QStringLiteral("rightCol"));
-    m_rightCol->setMinimumWidth(430);   // keep the trace readable at any size
+    m_rightCol->setMinimumWidth(430);   // keep the detail pane readable at any size
     auto *rightLay = new QVBoxLayout(m_rightCol);
     rightLay->setContentsMargins(0, 0, 0, 0);
     rightLay->setSpacing(6);
-
-    m_scopePanel = new Panel(QStringLiteral("Analysis Trace"));
-    m_scopePanel->setObjectName(QStringLiteral("scopePanel"));
-    m_scope = new TrendChart;
-    m_scopePanel->contentLayout()->addWidget(m_scope);
-    rightLay->addWidget(m_scopePanel, 4);
-    m_traceBtn = new ExpandButton;
-    m_traceBtn->setObjectName(QStringLiteral("traceExpandBtn"));
-    m_scopePanel->setCornerWidget(m_traceBtn);
-    connect(m_traceBtn, &ExpandButton::toggled, this, [this](bool on) {
-        setSectionFocus(on ? SectionFocus::Trace : SectionFocus::None);
-    });
 
     m_detailPanel = new Panel(QStringLiteral("Airport Detail"));
     m_detailPanel->setObjectName(QStringLiteral("detailPanel"));
     m_detail = new DetailPane;
     m_detailPanel->contentLayout()->addWidget(m_detail);
-    rightLay->addWidget(m_detailPanel, 6);
+    rightLay->addWidget(m_detailPanel, 9);
     m_detailBtn = new ExpandButton;
     m_detailBtn->setObjectName(QStringLiteral("detailExpandBtn"));
     m_detailPanel->setCornerWidget(m_detailBtn);
@@ -412,12 +399,7 @@ void MainWindow::onSiteUpdated(int idx)
         m_eventCount = m_eventCount + 1;
     }
     runAlertRules(idx);
-    if (idx == m_selected) {
-        m_scope->setData(d);
-        if (!std::isnan(d.current.loadPct))
-            m_scopePanel->setValue(QStringLiteral("%1%").arg(d.current.loadPct, 0, 'f', 1),
-                                   Theme::OrangeBright);
-    } else if (m_selected < 0 && d.state == SiteData::State::Live) {
+    if (m_selected < 0 && d.state == SiteData::State::Live) {
         onCardClicked(idx);   // first live site becomes the scope default
     }
 
@@ -477,15 +459,6 @@ void MainWindow::selectSite(int idx, bool announce)
     m_selected = idx;
     m_cards[idx]->setSelected(true);
     const SiteData &d = m_service->data(idx);
-    m_scopePanel->setTitle(QStringLiteral("Analysis Trace — %1 · %2")
-                               .arg(d.site.name, d.site.code));
-    if (d.valid() && !std::isnan(d.current.loadPct)) {
-        m_scopePanel->setValue(QStringLiteral("%1%").arg(d.current.loadPct, 0, 'f', 1),
-                               Theme::OrangeBright);
-    } else {
-        m_scopePanel->setValue(QStringLiteral("—"), Theme::TextMuted);
-    }
-    m_scope->setData(d);
     refreshDetail();
     if (announce) {
         m_log->log(QStringLiteral("INFO"), d.site.code,
@@ -601,17 +574,14 @@ void MainWindow::setSectionFocus(SectionFocus f)
     m_focus = f;
 
     const bool grid = f == SectionFocus::Grid;
-    const bool trace = f == SectionFocus::Trace;
     const bool detail = f == SectionFocus::Detail;
     const bool log = f == SectionFocus::Log;
-    m_gridPanel->setVisible(!trace && !detail && !log);
+    m_gridPanel->setVisible(!detail && !log);
     m_rightCol->setVisible(!grid);
-    m_scopePanel->setVisible(!detail && !log);
-    m_detailPanel->setVisible(!trace && !log);
-    m_logPanel->setVisible(!trace && !detail);
+    m_detailPanel->setVisible(!log);
+    m_logPanel->setVisible(!detail);
 
     m_gridBtn->setExpanded(grid);
-    m_traceBtn->setExpanded(trace);
     m_detailBtn->setExpanded(detail);
     m_logBtn->setExpanded(log);
 
@@ -620,9 +590,8 @@ void MainWindow::setSectionFocus(SectionFocus f)
                    ? QStringLiteral("Console view restored")
                    : QStringLiteral("%1 expanded to full view")
                          .arg(grid ? QStringLiteral("Site matrix")
-                                   : trace ? QStringLiteral("Analysis trace")
-                                           : detail ? QStringLiteral("Airport detail")
-                                                    : QStringLiteral("Event log")));
+                                   : detail ? QStringLiteral("Airport detail")
+                                       : QStringLiteral("Event log")));
     m_eventCount = m_eventCount + 1;
     m_logPanel->setValue(QStringLiteral("%1 EVENTS").arg(m_eventCount), Theme::TextMuted);
 }
@@ -645,9 +614,6 @@ void MainWindow::rebuildSiteGrid()
     for (int i = 0; i < m_service->siteCount(); ++i)
         m_announcedOnline[i] = m_service->data(i).valid();   // don't re-announce carried-over sites
 
-    m_scope->setData(SiteData{});
-    m_scopePanel->setTitle(QStringLiteral("Analysis Trace"));
-    m_scopePanel->setValue(QStringLiteral("—"), Theme::TextMuted);
     const int keep = prevCode.isEmpty() ? -1 : indexOfSite(prevCode);
     if (keep >= 0)
         selectSite(keep, false);

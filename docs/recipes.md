@@ -97,10 +97,8 @@ Example: an `errorsPct` metric, claimed color Cyan (spare accent).
    (label, formatted value, `Theme::Cyan`) in free space between the
    collision zones. Respect the collision zones in
    docs/design-system.md and re-measure with a `--grab`.
-4. **Chart** — `src/widgets/TrendChart.cpp`: a third series with its own
-   scale or share one; color it Cyan, add a legend swatch.
-5. **Rules** — a threshold in `evaluateAlerts` (next recipe).
-6. **Theme** — if the domain needs a ramp (value-scaled color), write a
+4. **Rules** — a threshold in `evaluateAlerts` (next recipe).
+5. **Theme** — if the domain needs a ramp (value-scaled color), write a
    sibling of `Theme::loadColor()`; do not fork existing values.
 
 The one-accent-per-domain rule (docs/design-system.md) is the only design

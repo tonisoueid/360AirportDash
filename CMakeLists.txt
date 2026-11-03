@@ -32,8 +32,6 @@ add_executable(360AirportDash
     src/widgets/IconGlyph.h
     src/widgets/ExpandButton.h
     src/widgets/BodySplitter.h
-    src/widgets/TrendChart.h
-    src/widgets/TrendChart.cpp
     src/widgets/FlightTable.h
     src/widgets/FlightTable.cpp
     src/widgets/DetailPane.h

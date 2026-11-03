@@ -22,7 +22,7 @@
 // ----------------------------------------------------------------------------
 namespace GlyphPaint {
 
-enum class Glyph { None, Activity, Cpu, Wifi, Warn, Trend };
+enum class Glyph { None, Activity, Cpu, Wifi, Warn };
 
 // pick the accent color per glyph when the caller doesn't override
 inline QColor baseColor(Glyph g)
@@ -32,7 +32,6 @@ inline QColor baseColor(Glyph g)
     case Glyph::Cpu:      return Theme::Blue;    // a node
     case Glyph::Wifi:     return Theme::Green;   // link up
     case Glyph::Warn:     return Theme::Amber;   // watch-rule warning
-    case Glyph::Trend:    return Theme::Orange;  // primary-metric trend
     default:              return Theme::TextFaint;
     }
 }
@@ -52,8 +51,6 @@ inline const char *pathData(Glyph g)
         return R"BI(M15.384 6.115a.485.485 0 0 0-.047-.736A12.44 12.44 0 0 0 8 3C5.259 3 2.723 3.882.663 5.379a.485.485 0 0 0-.048.736.52.52 0 0 0 .668.05A11.45 11.45 0 0 1 8 4c2.507 0 4.827.802 6.716 2.164.205.148.49.13.668-.049 M13.229 8.271a.482.482 0 0 0-.063-.745A9.46 9.46 0 0 0 8 6c-1.905 0-3.68.56-5.166 1.526a.48.48 0 0 0-.063.745.525.525 0 0 0 .652.065A8.46 8.46 0 0 1 8 7a8.46 8.46 0 0 1 4.576 1.336c.206.132.48.108.653-.065m-2.183 2.183c.226-.226.185-.605-.1-.75A6.5 6.5 0 0 0 8 9c-1.06 0-2.062.254-2.946.704-.285.145-.326.524-.1.75l.015.015c.16.16.407.19.611.09A5.5 5.5 0 0 1 8 10c.868 0 1.69.201 2.42.56.203.1.45.07.61-.091zM9.06 12.44c.196-.196.198-.52-.04-.66A2 2 0 0 0 8 11.5a2 2 0 0 0-1.02.28c-.238.14-.236.464-.04.66l.706.706a.5.5 0 0 0 .707 0l.707-.707z)BI";
     case Glyph::Warn:
         return R"BI(M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2)BI";
-    case Glyph::Trend:
-        return R"BI(M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5)BI";
     default: return nullptr;
     }
 }
@@ -258,7 +255,7 @@ inline QPainterPath glyphPath(Glyph g)
 {
     struct Cache {
         QVector<QPainterPath> paths;
-        Cache() : paths(int(Glyph::Trend) + 1)
+        Cache() : paths(int(Glyph::Warn) + 1)
         {
             for (int i = 0; i < paths.size(); ++i)
                 paths[i] = parse(pathData(Glyph(i)));
