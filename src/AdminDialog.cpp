@@ -1,20 +1,27 @@
 #include "AdminDialog.h"
+#include "AirportSearch.h"
+#include "AirportSeed.h"
 #include "SiteRegistry.h"
 #include "Theme.h"
 
+#include <QCheckBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRegularExpression>
+#include <QSpinBox>
 #include <QTableWidget>
 #include <QVBoxLayout>
 
 namespace {
 
 constexpr int kNameMaxLen = 18;
-constexpr int kCodeMaxLen = 6;
+constexpr int kCodeMaxLen = 4;
+constexpr int kMinPollSecs = 60;     // mirrors SiteRegistry validation
+constexpr int kMaxPollSecs = 86400;
 constexpr int kRegionMaxLen = 16;
 constexpr int kEndpointMaxLen = 64;
 
@@ -100,9 +107,11 @@ AdminDialog::AdminDialog(const QVector<Site> &sites, QWidget *parent)
     // roster table (left)
     m_table = new QTableWidget;
     m_table->setObjectName(QStringLiteral("adminTable"));
-    m_table->setColumnCount(4);
-    m_table->setHorizontalHeaderLabels({QStringLiteral("NAME"), QStringLiteral("CODE"),
-                                        QStringLiteral("REGION"), QStringLiteral("ENDPOINT")});
+    m_table->setColumnCount(7);
+    m_table->setHorizontalHeaderLabels({QStringLiteral("NAME"), QStringLiteral("ICAO"),
+                                        QStringLiteral("REGION"), QStringLiteral("ON"),
+                                        QStringLiteral("PIN"), QStringLiteral("POLL s"),
+                                        QStringLiteral("ENDPOINT")});
     m_table->verticalHeader()->hide();
     m_table->verticalHeader()->setDefaultSectionSize(30);
     m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -114,7 +123,10 @@ AdminDialog::AdminDialog(const QVector<Site> &sites, QWidget *parent)
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     m_table->setColumnWidth(1, 74);
-    m_table->setColumnWidth(2, 120);
+    m_table->setColumnWidth(2, 80);
+    m_table->setColumnWidth(3, 40);
+    m_table->setColumnWidth(4, 40);
+    m_table->setColumnWidth(5, 64);
     m_table->setFont(Theme::sans(11));
     connect(m_table, &QTableWidget::currentCellChanged,
             this, [this](int row, int, int, int) {
@@ -162,8 +174,8 @@ AdminDialog::AdminDialog(const QVector<Site> &sites, QWidget *parent)
     auto *crRow = new QHBoxLayout;
     auto *crCol = new QVBoxLayout;
     crCol->setSpacing(7);
-    crCol->addWidget(mkCaption(QStringLiteral("CODE")));
-    m_code = mkEdit(QStringLiteral("codeEdit"), QStringLiteral("FRA1"), kCodeMaxLen);
+    crCol->addWidget(mkCaption(QStringLiteral("ICAO CODE")));
+    m_code = mkEdit(QStringLiteral("codeEdit"), QStringLiteral("EDDF"), kCodeMaxLen);
     crCol->addWidget(m_code);
     crRow->addLayout(crCol, 1);
     auto *rgCol = new QVBoxLayout;
@@ -173,6 +185,25 @@ AdminDialog::AdminDialog(const QVector<Site> &sites, QWidget *parent)
     rgCol->addWidget(m_region);
     crRow->addLayout(rgCol, 1);
     flay->addLayout(crRow);
+    auto *optRow = new QHBoxLayout;
+    m_enabled = new QCheckBox(QStringLiteral("ENABLED"));
+    m_enabled->setObjectName(QStringLiteral("enabledCheck"));
+    m_enabled->setChecked(true);
+    m_pinned = new QCheckBox(QStringLiteral("PINNED"));
+    m_pinned->setObjectName(QStringLiteral("pinnedCheck"));
+    for (QCheckBox *c : {m_enabled, m_pinned}) {
+        c->setFont(Theme::sans(10, true));
+        optRow->addWidget(c);
+    }
+    flay->addLayout(optRow);
+    flay->addWidget(mkCaption(QStringLiteral("POLL INTERVAL (SECONDS)")));
+    m_poll = new QSpinBox;
+    m_poll->setObjectName(QStringLiteral("pollSpin"));
+    m_poll->setFont(Theme::sans(11));
+    m_poll->setRange(kMinPollSecs, kMaxPollSecs);
+    m_poll->setSingleStep(60);
+    m_poll->setValue(kDefaultPollSecs);
+    flay->addWidget(m_poll);
     flay->addWidget(mkCaption(QStringLiteral("ENDPOINT (FEED LOCATOR — URL, HOST:PORT, DEVICE ID…)")));
     m_endpoint = mkEdit(QStringLiteral("endpointEdit"),
                         QStringLiteral("https://example.com/api/v1/nodes/…"), kEndpointMaxLen);
@@ -265,6 +296,9 @@ void AdminDialog::applyStyleSheet()
         "QLineEdit { background: %2; border: 1px solid %3; border-radius: 6px;"
         "  padding: 6px 8px; color: %6; selection-background-color: %10; }"
         "QLineEdit:focus { border: 1px solid %10; }"
+        "QSpinBox { background: %2; border: 1px solid %3; border-radius: 6px;"
+        "  padding: 5px 8px; color: %6; }"
+        "QCheckBox { color: %5; spacing: 6px; }"
         "%11"
         "QMessageBox { background: %1; }"
         "QMessageBox QLabel { color: %5; }"
@@ -291,7 +325,10 @@ void AdminDialog::rebuildTable(int selectRow)
         m_table->setItem(r, 0, mk(s.name));
         m_table->setItem(r, 1, mk(s.code));
         m_table->setItem(r, 2, mk(s.region));
-        m_table->setItem(r, 3, mk(s.endpoint));
+        m_table->setItem(r, 3, mk(s.enabled ? QStringLiteral("●") : QStringLiteral("—")));
+        m_table->setItem(r, 4, mk(s.pinned ? QStringLiteral("●") : QStringLiteral("—")));
+        m_table->setItem(r, 5, mk(QString::number(s.pollIntervalSecs)));
+        m_table->setItem(r, 6, mk(s.endpoint));
     }
     m_count->setText(QStringLiteral("%1 SITES").arg(m_sites.size()));
     m_table->setCurrentCell(qBound(-1, selectRow, m_sites.size() - 1), 0);
@@ -307,6 +344,9 @@ void AdminDialog::loadForm(int row)
     m_code->setText(s.code);
     m_region->setText(s.region);
     m_endpoint->setText(s.endpoint);
+    m_enabled->setChecked(s.enabled);
+    m_pinned->setChecked(s.pinned);
+    m_poll->setValue(s.pollIntervalSecs);
     m_error->clear();
 }
 
@@ -327,14 +367,29 @@ bool AdminDialog::formToSite(Site *out, QString *err) const
 
     if (name.isEmpty()) { *err = QStringLiteral("NAME REQUIRED"); return false; }
     if (name.size() > kNameMaxLen) { *err = QStringLiteral("NAME TOO LONG"); return false; }
-    if (code.isEmpty()) { *err = QStringLiteral("CODE REQUIRED"); return false; }
-    if (code.size() > kCodeMaxLen) { *err = QStringLiteral("CODE TOO LONG"); return false; }
+    if (code.isEmpty()) { *err = QStringLiteral("ICAO CODE REQUIRED"); return false; }
     if (region.size() > kRegionMaxLen) { *err = QStringLiteral("REGION TOO LONG"); return false; }
 
     out->name = name;
     out->code = code;
     out->region = region;
     out->endpoint = endpoint;
+    out->enabled = m_enabled->isChecked();
+    out->pinned = m_pinned->isChecked();
+    out->pollIntervalSecs = m_poll->value();
+    return true;
+}
+
+bool AdminDialog::rejectNonIcao(const QString &code)
+{
+    static const QRegularExpression icao(QStringLiteral("^[A-Z]{4}$"));
+    if (icao.match(code).hasMatch())
+        return false;
+    const QString icaoFor = iataToIcao(airportSeed(), code);
+    if (!icaoFor.isEmpty())
+        flashError(QStringLiteral("%1 → %2").arg(code, icaoFor));
+    else
+        flashError(QStringLiteral("ENTER A 4-LETTER ICAO CODE (A-Z)"));
     return true;
 }
 
@@ -346,8 +401,10 @@ void AdminDialog::onAdd()
         flashError(err);
         return;
     }
+    if (rejectNonIcao(s.code))
+        return;
     if (codeTaken(s.code, -1)) {
-        flashError(QStringLiteral("CODE %1 ALREADY IN ROSTER").arg(s.code));
+        flashError(QStringLiteral("ICAO %1 ALREADY IN ROSTER").arg(s.code));
         return;
     }
     m_sites.push_back(s);
@@ -368,8 +425,10 @@ void AdminDialog::onUpdate()
         flashError(err);
         return;
     }
+    if (rejectNonIcao(s.code))
+        return;
     if (codeTaken(s.code, row)) {
-        flashError(QStringLiteral("CODE %1 ALREADY IN ROSTER").arg(s.code));
+        flashError(QStringLiteral("ICAO %1 ALREADY IN ROSTER").arg(s.code));
         return;
     }
     m_sites[row] = s;

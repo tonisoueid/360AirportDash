@@ -5,9 +5,11 @@
 #include <QDialog>
 #include <QVector>
 
+class QCheckBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QSpinBox;
 class QTableWidget;
 
 // ----------------------------------------------------------------------------
@@ -44,6 +46,8 @@ private:
     bool formToSite(Site *out, QString *err) const;
     bool codeTaken(const QString &code, int exceptRow) const;
     void flashError(const QString &msg);
+    // Rejects non-ICAO input; for a known IATA code sets the "CDG → LFPG" hint.
+    bool rejectNonIcao(const QString &code);
     void updateButtons();
     void applyStyleSheet();
 
@@ -53,6 +57,9 @@ private:
     QLineEdit *m_code = nullptr;
     QLineEdit *m_region = nullptr;
     QLineEdit *m_endpoint = nullptr;
+    QCheckBox *m_enabled = nullptr;
+    QCheckBox *m_pinned = nullptr;
+    QSpinBox *m_poll = nullptr;
     QLabel *m_error = nullptr;
     QLabel *m_count = nullptr;
     QPushButton *m_addBtn = nullptr;
