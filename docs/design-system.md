@@ -98,8 +98,14 @@ bright-pixel spans instead:
 - Grab frames with `--grab`; for harness-driven widgets, host them in an
   opaque window first — bare `widget->grab()` shows alpha-garbage at
   transparent edges.
-- Site-card collision zones (default 384×288, cards stretch wider in the
-  grid): header band y≈8–32, headline + trend chip y≈55–100, metric rows
-  y≈115–165, gauge column x = width−52…−9 with tick labels to width−4,
-  sparkline y = height−80…−30, footer at height−11. Re-measure after any
-  font or layout change.
+- Airport-card collision zones (default 384×288, cards stretch wider in the
+  grid; content spans x = 16…width−16). Measured bright-pixel bands:
+  ICAO + status badge y≈15–41 (ICAO left, badge chip right-aligned);
+  city y≈56–69; country y≈80–89; hairline divider y=104 (excluded, ≤ BorderHi);
+  local clock label y≈117–125 and time + zone abbreviation y≈136–157
+  (absent entirely when the IANA zone is empty/invalid); ARRIVALS / DEPARTURES
+  labels y≈187–195 and counts y≈208–229 (departures column starts at
+  x = width/2); "UPDATED N MIN AGO" y≈265–273 (absent with no fetch).
+  Missing city/country render `---` in `TextMuted`. Badge colors: LIVE green,
+  QUIET Info blue, STALE and PAUSED Warn amber, ERROR Crit red; Pending is a
+  dashed `---` chip, not a status. Re-measure after any font or layout change.

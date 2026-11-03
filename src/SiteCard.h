@@ -1,22 +1,28 @@
 #pragma once
 
+#include "Airport.h"
 #include "SiteData.h"
 
 #include <QWidget>
 
-// One watched site: site name with its code and a live/offline indicator,
-// primary-metric readout (example: load) with a short-history trend chip, a
-// segmented 0–100 gauge on the domain ramp, metric rows (latency / sessions
-// / trend / region), a trailing sparkline of the secondary metric, and a
-// data-age/status footer. Repaints on data updates and the minute tick.
-// Pending sites render an explicit dashed placeholder — no invented values.
+// One watched airport: ICAO (large) with a status badge, city, country text,
+// the airport's local clock (from its IANA zone), arrivals / departures
+// counts and an "updated N min ago" stamp. Everything unknown is a gap:
+// missing metadata → "---", unmeasured board → "---", empty/invalid time
+// zone → no clock, never fetched → no stamp. No bitmap assets, no flags.
+//
+// The clock and the stamp are computed at paint time and the card only
+// repaints on data updates and MainWindow's minute gate (calm UI).
 class SiteCard : public QWidget
 {
     Q_OBJECT
 public:
     explicit SiteCard(int index, QWidget *parent = nullptr);
 
-    void setData(const SiteData &d);
+    // `paused` = FeedService::rateLimitPaused(), fed to cardBadge().
+    void setData(const SiteData &d, bool paused = false);
+    // Metadata from AirportRegistry for this card's ICAO; nullptr = unknown.
+    void setAirport(const Airport *a);
     void setSelected(bool sel);
     int index() const { return m_index; }
 
@@ -33,10 +39,8 @@ protected:
 private:
     int m_index;
     SiteData m_data;
-    bool m_live = false;
+    Airport m_airport;           // empty fields when metadata is unknown
+    bool m_paused = false;
     bool m_selected = false;
     bool m_hover = false;
-
-    void drawSparkline(QPainter &p, const QRectF &r);
-    void drawLoadGauge(QPainter &p, const QRectF &r, double loadPct);
 };

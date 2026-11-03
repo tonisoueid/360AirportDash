@@ -93,9 +93,9 @@ Example: an `errorsPct` metric, claimed color Cyan (spare accent).
    `Sample`. Doubles start NaN, ints start -1. That's the whole convention.
 2. **Feed** — `FeedService.cpp::parseBody`: populate it like any field,
    leaving NaN when absent.
-3. **Card** — `src/SiteCard.cpp`: add a row to the `rows` table (label,
-   formatted value, `Theme::Cyan`) or a dedicated instrument if it deserves
-   one (gauge, segmented blocks). Respect the collision zones in
+3. **Card** — `src/SiteCard.cpp`: add a labeled block to `paintEvent`
+   (label, formatted value, `Theme::Cyan`) in free space between the
+   collision zones. Respect the collision zones in
    docs/design-system.md and re-measure with a `--grab`.
 4. **Chart** — `src/widgets/TrendChart.cpp`: a third series with its own
    scale or share one; color it Cyan, add a legend swatch.

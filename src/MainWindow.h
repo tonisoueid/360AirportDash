@@ -70,6 +70,8 @@ private:
     void refreshStatusText();
     void runAlertRules(int idx);
     void relayoutSiteCards();
+    void refreshCard(int i);
+    void refreshAllCards();
     void reflowSiteGrid();
     int siteColumns() const;
     void setSectionFocus(SectionFocus f);

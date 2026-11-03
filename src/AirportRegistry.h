@@ -6,6 +6,8 @@
 #include <QString>
 #include <QVector>
 
+#include <optional>
+
 // ----------------------------------------------------------------------------
 // The airport directory. Starts from the compiled-in seed table, then is
 // replaced by airports.json (same config directory as sites.json) when a valid
@@ -33,6 +35,10 @@ public:
     bool addLearned(const QString &icao);
 
     const QVector<Airport> &airports() const { return m_airports; }
+
+    // Case-insensitive lookup by ICAO; nullopt when unknown (returns a copy,
+    // since addLearned() can reallocate the table).
+    std::optional<Airport> find(const QString &icao) const;
 
     static QString configPath();
 

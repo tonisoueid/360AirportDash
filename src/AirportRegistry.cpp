@@ -31,6 +31,15 @@ bool AirportRegistry::contains(const QString &icaoUpper) const
     return false;
 }
 
+std::optional<Airport> AirportRegistry::find(const QString &icao) const
+{
+    const QString key = icao.trimmed();
+    for (const Airport &a : m_airports)
+        if (a.icao.compare(key, Qt::CaseInsensitive) == 0)
+            return a;
+    return std::nullopt;
+}
+
 AirportRegistry::LoadResult AirportRegistry::load()
 {
     m_airports = airportSeed();
