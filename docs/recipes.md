@@ -184,3 +184,19 @@ never zero. `known=true` with no flights is a real empty board. Fill them with
 `parseBoard(httpStatus, body, &board, &err, &icaos)` from `OpenSkyParse.h`
 (HTTP 404 with body `[]` is a valid empty board), then call
 `airportSeen()` for each ICAO in `icaos`.
+
+## OpenSky credentials
+
+`OpenSkyAuth` (`src/OpenSkyAuth.h`) loads OpenSky API client credentials:
+
+1. Environment (wins): `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET` (both required).
+2. Otherwise `opensky.json` in the app config dir
+   (`QStandardPaths::AppConfigLocation`, next to `sites.json`):
+   `{"client_id": "...", "client_secret": "..."}`.
+
+With neither, it runs anonymous: `withToken(cb)` calls `cb("", "")`. With
+credentials it performs the OAuth2 client-credentials grant, caches the token
+in memory, refreshes it 30 s before expiry and coalesces concurrent callers
+onto one fetch. On failure `cb("", error)` where `error` names the HTTP status
+only. The id, secret and token are never logged or put in error strings —
+keep it that way in callers.

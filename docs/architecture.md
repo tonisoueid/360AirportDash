@@ -23,6 +23,7 @@ only paint what they are handed.
 
 | File | Role |
 |---|---|
+| `src/OpenSkyAuth.h/.cpp` | OpenSky OAuth2 client-credentials token manager: env/config-file credentials, in-memory token refreshed ~30 s before expiry, coalesced fetches, anonymous mode without credentials. Never logs secrets. See docs/recipes.md "OpenSky credentials". |
 | `src/OpenSkyParse.h/.cpp` | Pure OpenSky `/flights/arrival` / `/flights/departure` parser (`parseBoard`); 404 + `[]` is a known-empty board; reports ICAOs seen for `airportSeen()`. No networking. |
 | `src/SiteData.h` | Data model (`Site`, `Sample`, `FlightBoard`, `SiteData`), default roster, watch rules (`evaluateAlerts`). Everything downstream follows its missing-data convention. |
 | `src/SiteRegistry.{h,cpp}` | Editable roster persisted as `sites.json` in `QStandardPaths::AppConfigLocation`. `setSites()` normalizes → validates → persists (`QSaveFile`) → emits. |
