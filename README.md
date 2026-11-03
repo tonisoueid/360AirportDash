@@ -17,9 +17,10 @@ scripts/rename-project.sh FleetConsole    # rebrand + self-verifying build
 
 ![screenshot](screenshot.png)
 
-The screenshot shows the honest day-zero state: the feed seam is
-intentionally unwired, so every site renders its explicit gap
-("AWAITING FIRST SCAN" — gaps shown, never faked) until you wire a source.
+The screenshot shows the offline day-zero state: with no samples every site
+renders its explicit gap ("AWAITING FIRST SCAN" — gaps shown, never faked).
+Online, `FeedService` polls OpenSky (anonymous: departures only; with
+credentials: arrivals too).
 The scan cycle, countdown, link semantics, alerting and admin UI are all
 live.
 
@@ -100,8 +101,9 @@ Details, bundle policies and verification: [docs/packaging.md](docs/packaging.md
 [docs/recipes.md](docs/recipes.md) walks through the four common changes —
 each names the exact seams:
 
-- **Wire a feed** — replace the stub in `FeedService::pollSite()`;
-  `applySample()` / `applyFailure()` do the rest.
+- **Wire a feed** — `FeedService::pollSite()` is already wired to OpenSky;
+  replace it to use another source. `applySample()` / `applyFailure()` do
+  the rest.
 - **Add a data domain** — model field → feed parse → card row → chart
   series → watch rule, with a claimed accent.
 - **Add a watch rule** — a guarded threshold in `evaluateAlerts()` with a

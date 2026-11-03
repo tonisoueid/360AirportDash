@@ -8,6 +8,11 @@
 #include <QTimer>
 #include <QVector>
 
+#include <functional>
+#include <memory>
+
+class OpenSkyAuth;
+
 // ----------------------------------------------------------------------------
 // Polls the watched sites on a staggered scan cycle, like a NOC polling its
 // telemetry stations in round-robin. One in-flight request per site; failures
@@ -16,12 +21,13 @@
 // preserving the last good sample of any site whose code and endpoint are
 // unchanged, and drops replies that were in flight for a superseded roster.
 //
-// THE FEED SEAM: pollSite() ships as a stub — no data source is wired, so
-// sites stay Pending and render explicit gaps ("AWAITING FIRST SCAN").
-// Replace the marked block in FeedService.cpp with your transport, then call
-// applySample() / applyFailure(); everything downstream (cards, chart, alert
-// rules, event log) lights up with no further changes. A worked example
-// lives in docs/recipes.md "Wire a feed".
+// THE FEED: pollSite() is wired to the OpenSky flights API (arrivals and
+// departures for the site's ICAO over a trailing window). Authenticated mode
+// (OpenSkyAuth bearer token) fetches both boards; anonymous mode sends no
+// auth header and fetches DEPARTURES ONLY, leaving arrivals unknown (gap).
+// Every poll ends in exactly one applySample()/applyFailure(). HTTP 429
+// honours Retry-After and pauses all OpenSky requests; HTTP 5xx is retried
+// once. See docs/architecture.md "OpenSky feed" and docs/recipes.md.
 // ----------------------------------------------------------------------------
 class FeedService : public QObject
 {
@@ -43,6 +49,13 @@ public:
     bool scanActive() const { return m_scanTimer.isActive() || m_scanQueueRemaining > 0; }
     QDateTime lastFullSyncUtc() const { return m_lastSync; }
 
+    // OpenSky access. The base URL / retry delay are test seams.
+    OpenSkyAuth *openSkyAuth() const { return m_auth; }
+    void setBaseUrl(const QString &url) { m_baseUrl = url; }
+    void setRetryDelayMs(int ms) { m_retryDelayMs = ms; }
+
+    static constexpr int kWindowSecs = 24 * 3600;   // trailing board window
+    static constexpr int kMax429Retries = 3;        // per board, then fail
     static constexpr int kRefreshSecs = 900;   // scheduled sweep every 15 min
     static constexpr int kStaggerMs = 450;     // cadence between site polls
 
@@ -76,19 +89,51 @@ public:
     void airportSeen(const QString &icao);
 
     // Ask the feed to refill the airport directory (used after a damaged
-    // airports.json). STUB: no client is wired, so nothing is requested and
-    // airportFillCompleted() is never emitted. A real client calls
+    // airports.json). STUB: the OpenSky client has no airport-list fill, so
+    // nothing is requested and airportFillCompleted() is never emitted. A real client calls
     // completeAirportFill() once its fill has finished.
     void requestAirportFill();
     void completeAirportFill();
 
 private:
+    struct BoardResult {
+        bool done = false;            // finished (ok, failed, or skipped)
+        bool ok = false;              // measured -> `board.known`
+        FlightBoard board;
+        QString err;
+        int tries5xx = 0;
+        int tries429 = 0;
+    };
+    struct PollJob {
+        int idx = -1;
+        quint32 gen = 0;
+        QString icao;
+        QString token;                // bearer; empty in anonymous mode
+        bool anon = true;
+        BoardResult dep, arr;
+        QStringList icaos;
+    };
+    struct PollState {
+        bool busy = false;            // one in-flight poll per site
+        QTimer *timer = nullptr;      // per-site retry / rate-limit wait
+        std::function<void()> onTimer;
+    };
+
+    void resetPollState();
+    void advanceJob(const std::shared_ptr<PollJob> &job);
+    void issueBoard(const std::shared_ptr<PollJob> &job, bool departures);
+    void armTimer(const std::shared_ptr<PollJob> &job, int ms, std::function<void()> fn);
+    void completeJob(const std::shared_ptr<PollJob> &job);
     void advanceScan();
     void finishPoll(int idx);             // scan-queue bookkeeping + signal
 
     QVector<SiteData> m_data;
-    QNetworkAccessManager m_net;          // ready for the seam (transfer
-                                          // timeout armed in the ctor)
+    QNetworkAccessManager m_net;          // transfer timeout armed in the ctor
+    OpenSkyAuth *m_auth = nullptr;        // child; anonymous when no credentials
+    QString m_baseUrl;                    // OpenSky REST base (no trailing slash)
+    int m_retryDelayMs = 2000;            // pause before the single 5xx retry
+    qint64 m_blockedUntilMs = 0;          // global 429 back-off (epoch ms)
+    QVector<PollState> m_poll;            // parallel to m_data
     QTimer m_scanTimer;                   // walks the staggered sweep
     int m_scanCursor = 0;
     int m_scanQueueRemaining = 0;

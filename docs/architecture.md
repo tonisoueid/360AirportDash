@@ -27,7 +27,7 @@ only paint what they are handed.
 | `src/OpenSkyParse.h/.cpp` | Pure OpenSky `/flights/arrival` / `/flights/departure` parser (`parseBoard`); 404 + `[]` is a known-empty board; reports ICAOs seen for `airportSeen()`. No networking. |
 | `src/SiteData.h` | Data model (`Site`, `Sample`, `FlightBoard`, `SiteData`), default roster, watch rules (`evaluateAlerts`). Everything downstream follows its missing-data convention. |
 | `src/SiteRegistry.{h,cpp}` | Editable roster persisted as `sites.json` in `QStandardPaths::AppConfigLocation`. `setSites()` normalizes → validates → persists (`QSaveFile`) → emits. |
-| `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **Ships as a documented stub — the feed seam.** |
+| `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **`pollSite()` is wired to OpenSky** (departures; arrivals too when `OpenSkyAuth` has credentials, otherwise a gap): sequential per-site requests, 429 `Retry-After` pause (global) and 5xx single retry; partial results leave the failed board unknown; every poll ends in one `applySample`/`applyFailure`. |
 | `src/MainWindow.{h,cpp}` | Owns the timers; diffs `evaluateAlerts` between samples so the event log records raise, severity change and clear ("…nominal"). Hotkeys, selection, panel focus. |
 | `src/SiteCard.{h,cpp}` | Per-site instrument tile, custom `QPainter`. |
 | `src/widgets/TrendChart.{h,cpp}` | Dual-scale history trace for the selected site. |
@@ -100,6 +100,26 @@ crash never truncates it) under `AppConfigLocation`
 invalid file falls back to the built-in defaults and logs a WARN — the
 console always boots.
 
+### OpenSky feed (`FeedService::pollSite`)
+
+- Per site ICAO (`Site::code`) it requests `/flights/departure`, then — only
+  with `OpenSkyAuth` credentials — `/flights/arrival`, over the trailing
+  `kWindowSecs` (24 h). Requests for one site are sequential, so a site has
+  at most one request or wait pending.
+- **Anonymous mode** (no credentials): no auth header, departures only; the
+  arrivals board stays `known=false` (a gap, never "empty").
+- **Outcomes**: every poll ends in exactly one `applySample` / `applyFailure`
+  (scan-queue bookkeeping). 404 + `[]` is a known-empty board. Other 4xx and
+  transport errors fail the board; both boards failing → `applyFailure`
+  (last good sample kept, state Stale/Error). One board ok + one failed →
+  `applySample` with the failed board left unknown.
+- **429**: `Retry-After` (or `X-Rate-Limit-Retry-After-Seconds`, default
+  60 s, max 3600 s) sets a global pause on all OpenSky requests; the board is
+  retried after the delay, failing after `kMax429Retries`. **5xx**: retried
+  once, then the board fails.
+- A roster swap bumps the generation counter and cancels the per-site
+  timers; late replies are dropped. `--offline` never starts polling.
+
 ### Airport learning (feed hook)
 
 `AirportRegistry` (airports.json, seeded from the compiled-in table) is
@@ -113,9 +133,10 @@ owned by `MainWindow` and driven only by what the feed reports:
   `FeedService::requestAirportFill()` at startup (not offline); the real
   client calls `completeAirportFill()` when done, which emits
   `airportFillCompleted` and `MainWindow` then calls `clearRefill()`.
-- Shipped stubs: `requestAirportFill()` does nothing and nothing calls
-  `airportSeen()`, so no airport is learned and the refill flag is never
-  cleared until a client exists (invariant 2).
+- `pollSite()` calls `airportSeen()` for every ICAO named in the boards, so
+  airports are learned. `requestAirportFill()` is still a stub (no airport
+  list endpoint is used), so the refill flag is not cleared by the feed
+  (invariant 2).
 
 ### Calm UI
 

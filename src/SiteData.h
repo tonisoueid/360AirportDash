@@ -105,7 +105,7 @@ struct SiteData {
 // Built-in default roster — example sites standing in for your fleet. The
 // live roster is administrable at runtime (see SiteRegistry); it is seeded
 // from this list and overridden by the saved JSON config. The endpoints are
-// placeholders: the shipped FeedService is a stub and never contacts them.
+// placeholders: the OpenSky feed queries by ICAO and never contacts them.
 // ----------------------------------------------------------------------------
 inline const QVector<Site> &siteList()
 {
