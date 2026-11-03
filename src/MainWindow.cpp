@@ -399,8 +399,8 @@ void MainWindow::onScanProgress(int done, int total)
                    live == total ? Theme::Green : Theme::Amber);
         if (live == 0)
             m_log->log(QStringLiteral("INFO"), QStringLiteral("FEED"),
-                       QStringLiteral("No samples yet — the template ships with an unwired "
-                                      "feed seam (see docs/recipes.md)"),
+                       QStringLiteral("No samples yet — OpenSky unreachable, rate limited "
+                                      "or rejected the request"),
                        Theme::TextSoft);
         m_eventCount = m_eventCount + 1;
     }

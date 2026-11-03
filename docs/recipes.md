@@ -8,11 +8,12 @@ recipe touches the same few places.
 
 ## 1. Wire a feed
 
-The template boots with an unwired `FeedService`: sites stay Pending and
-render explicit gaps ("AWAITING FIRST SCAN") — the missing-data convention
-working as designed. One function turns it into a live console.
+`FeedService::pollSite()` is already wired to OpenSky (see
+`docs/architecture.md`). The recipe below is the generic pattern for wiring a
+different source: unmeasured values render explicit gaps ("AWAITING FIRST
+SCAN") — the missing-data convention working as designed.
 
-**Edit `src/FeedService.cpp` → `pollSite()`** — replace the stub block:
+**Edit `src/FeedService.cpp` → `pollSite()`** — replace the OpenSky block:
 
 ```cpp
 void FeedService::pollSite(int idx)

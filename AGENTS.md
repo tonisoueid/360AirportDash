@@ -12,11 +12,12 @@ that log raise and clear, and a fully custom-painted dark console
 (charcoal-blue chassis, one saturated accent per data domain, no bitmap
 assets). One executable, `360AirportDash`.
 
-**Ships with an unwired feed seam**: `FeedService::pollSite()` is a
-documented stub — no network calls are made and every site renders its
-explicit gap state until a feed is implemented (docs/recipes.md "Wire a
-feed"). Derived projects are expected to rename
-(`scripts/rename-project.sh`) and wire a feed as their first two actions.
+**Feed wired to OpenSky**: `FeedService::pollSite()` fetches departures
+(and, with OpenSky credentials, arrivals) per site ICAO; with no credentials
+it polls departures only and arrivals stay a gap. `--offline` makes no calls.
+Failed or unmeasured boards render explicit gaps (docs/recipes.md "Wire a
+feed" covers the seam pattern). HTTP 429 honours `Retry-After` and pauses all
+OpenSky requests; 5xx is retried once.
 
 No tests are bundled; no linter is configured. Verification is headless
 render + measurement (below) — preserve those modes.
@@ -94,7 +95,7 @@ window). Short version:
 - **`src/FeedService`** — staggered polling, one in-flight request per
   site, `kStaggerMs = 450` apart, sweep every `kRefreshSecs = 900`. To
   change the sweep interval edit **only** `kRefreshSecs`. The FEED SEAM
-  (stub `pollSite` + `applySample`/`applyFailure`) is the template's
+  (OpenSky `pollSite` + `applySample`/`applyFailure`) is the template's
   central extension point.
 - **`src/MainWindow`** — owns timers; diffs alert results so the event log
   records raise, severity change and clear ("…nominal"). Hotkeys in
@@ -117,7 +118,7 @@ window). Short version:
    never invented" is the core promise — never fake a reading.
 2. **UI claims must be wired**: any countdown/status promise (e.g. "Next
    scan", "Last sync") must have a backing code path that only reports what
-   actually happened (the stub feed intentionally reports 0/N live and
+   actually happened (a site that has not reported is never counted live and
    refuses to stamp "Sync" without a reporting site).
 3. **Calm UI**: cards repaint on a minute gate and data updates; anything
    blinking belongs in the window header. New card elements must be static

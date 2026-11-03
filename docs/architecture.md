@@ -27,7 +27,7 @@ only paint what they are handed.
 | `src/OpenSkyParse.h/.cpp` | Pure OpenSky `/flights/arrival` / `/flights/departure` parser (`parseBoard`); 404 + `[]` is a known-empty board; reports ICAOs seen for `airportSeen()`. No networking. |
 | `src/SiteData.h` | Data model (`Site`, `Sample`, `FlightBoard`, `SiteData`), default roster, watch rules (`evaluateAlerts`). Everything downstream follows its missing-data convention. |
 | `src/SiteRegistry.{h,cpp}` | Editable roster persisted as `sites.json` in `QStandardPaths::AppConfigLocation`. `setSites()` normalizes → validates → persists (`QSaveFile`) → emits. |
-| `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **Ships as a documented stub — the feed seam.** |
+| `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **`pollSite()` is wired to OpenSky** (departures; arrivals too when `OpenSkyAuth` has credentials, otherwise a gap): sequential per-site requests, 429 `Retry-After` pause (global) and 5xx single retry; partial results leave the failed board unknown; every poll ends in one `applySample`/`applyFailure`. |
 | `src/MainWindow.{h,cpp}` | Owns the timers; diffs `evaluateAlerts` between samples so the event log records raise, severity change and clear ("…nominal"). Hotkeys, selection, panel focus. |
 | `src/SiteCard.{h,cpp}` | Per-site instrument tile, custom `QPainter`. |
 | `src/widgets/TrendChart.{h,cpp}` | Dual-scale history trace for the selected site. |
@@ -113,9 +113,10 @@ owned by `MainWindow` and driven only by what the feed reports:
   `FeedService::requestAirportFill()` at startup (not offline); the real
   client calls `completeAirportFill()` when done, which emits
   `airportFillCompleted` and `MainWindow` then calls `clearRefill()`.
-- Shipped stubs: `requestAirportFill()` does nothing and nothing calls
-  `airportSeen()`, so no airport is learned and the refill flag is never
-  cleared until a client exists (invariant 2).
+- `pollSite()` calls `airportSeen()` for every ICAO named in the boards, so
+  airports are learned. `requestAirportFill()` is still a stub (no airport
+  list endpoint is used), so the refill flag is not cleared by the feed
+  (invariant 2).
 
 ### Calm UI
 
