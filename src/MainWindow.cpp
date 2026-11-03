@@ -60,12 +60,9 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
     connect(m_service, &FeedService::siteUpdated, this, &MainWindow::onSiteUpdated);
     connect(m_service, &FeedService::scanProgress, this, &MainWindow::onScanProgress);
     connect(m_service, &FeedService::linkStatusChanged, this, &MainWindow::onLinkStatus);
-    // Pause edge: repaint every card so a badge can pick it up (painting
-    // itself lands with the card badge work).
-    connect(m_service, &FeedService::rateLimitPausedChanged, this, [this](bool) {
-        for (int i = 0; i < m_cards.size() && i < m_service->siteCount(); ++i)
-            m_cards[i]->setData(m_service->data(i));
-    });
+    // Pause edge: refresh every card so the PAUSED badge appears / clears.
+    connect(m_service, &FeedService::rateLimitPausedChanged, this,
+            [this](bool) { refreshAllCards(); });
     connect(m_service, &FeedService::sitesReconfigured, this, &MainWindow::rebuildSiteGrid);
     connect(m_registry, &SiteRegistry::sitesChanged, this, [this] {
         m_service->setSites(m_registry->sites());
@@ -81,6 +78,8 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
     connect(m_service, &FeedService::airportFillCompleted, this, [this] {
         m_airports->clearRefill();
     });
+    connect(m_airports, &AirportRegistry::airportsChanged, this,
+            &MainWindow::refreshAllCards);
     if (m_airports->needsRefill() && !m_offline)
         m_service->requestAirportFill();
 
@@ -324,6 +323,26 @@ void MainWindow::refreshStatusText()
         .arg(up / 3600).arg((up % 3600) / 60, 2, 10, QChar('0')));
 }
 
+// Push data, pause state and airport metadata (looked up by the site's ICAO,
+// case-insensitive) into one card. Missing metadata leaves gaps.
+void MainWindow::refreshCard(int i)
+{
+    if (i < 0 || i >= m_cards.size() || i >= m_service->siteCount())
+        return;
+    const SiteData &d = m_service->data(i);
+    std::optional<Airport> a;
+    if (m_airports)
+        a = m_airports->find(d.site.code);
+    m_cards[i]->setAirport(a ? &*a : nullptr);
+    m_cards[i]->setData(d, m_service->rateLimitPaused());
+}
+
+void MainWindow::refreshAllCards()
+{
+    for (int i = 0; i < m_cards.size(); ++i)
+        refreshCard(i);
+}
+
 void MainWindow::onSecondTick()
 {
     const QDateTime nowUtc = QDateTime::currentDateTimeUtc();
@@ -363,7 +382,7 @@ void MainWindow::onHalfSecond()
 void MainWindow::onSiteUpdated(int idx)
 {
     const SiteData &d = m_service->data(idx);
-    m_cards[idx]->setData(d);
+    refreshCard(idx);
     if (d.state == SiteData::State::Live && idx < m_announcedOnline.size()
         && !m_announcedOnline[idx]) {
         m_announcedOnline[idx] = true;
@@ -552,7 +571,7 @@ void MainWindow::relayoutSiteCards()
         m_cards.push_back(card);
         connect(card, &SiteCard::clicked, this, &MainWindow::onCardClicked);
         m_grid->addWidget(card, i / m_gridCols, i % m_gridCols);
-        card->setData(m_service->data(i));
+        refreshCard(i);
     }
     // setRowStretch(r, …) grows rowCount() once r reaches it, so the count
     // must be read once up front or the reset loop never terminates.

@@ -29,7 +29,7 @@ only paint what they are handed.
 | `src/SiteRegistry.{h,cpp}` | Editable roster persisted as `sites.json` in `QStandardPaths::AppConfigLocation`. `setSites()` normalizes → validates → persists (`QSaveFile`) → emits. |
 | `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **`pollSite()` is wired to OpenSky** (departures; arrivals too when `OpenSkyAuth` has credentials, otherwise a gap): sequential per-site requests, 429 `Retry-After` pause (global) and 5xx single retry; partial results leave the failed board unknown; every poll ends in one `applySample`/`applyFailure`. |
 | `src/MainWindow.{h,cpp}` | Owns the timers; diffs `evaluateAlerts` between samples so the event log records raise, severity change and clear ("…nominal"). Hotkeys, selection, panel focus. |
-| `src/SiteCard.{h,cpp}` | Per-site instrument tile, custom `QPainter`. |
+| `src/SiteCard.{h,cpp}` | Per-airport card (ICAO, badge, city/country, local clock, arrivals/departures, updated-ago), custom `QPainter`; metadata arrives via `setAirport()`. |
 | `src/widgets/TrendChart.{h,cpp}` | Dual-scale history trace for the selected site. |
 | `src/EventLog.{h,cpp}` | Timestamped UTC log, capped at 300 lines. |
 | `src/AdminDialog.{h,cpp}` | Roster editor (table + form). ICAO-only Add/Update, duplicate rejection, ENABLED/PINNED/poll-interval editing, IATA→ICAO hint (`iataToIcao()` in `src/AirportSearch`). Only stylesheet user. |
@@ -74,7 +74,7 @@ reply can outlive the state that issued it. Consequences:
 ### History window
 
 `applySample()` appends to `SiteData::recent`, capped at `kHistoryCap`
-(default 48). Everything historical — card sparkline, trend chart, trend
+(default 48). Everything historical — trend chart, trend
 watch rules — reads that window; nothing else keeps its own buffer.
 
 ### Alert diffing (raise / severity-change / clear)
@@ -138,6 +138,18 @@ Derived, never stored. Evaluated in this order:
 5. `Quiet` — at least one known board, and every known board is empty.
 
 `known=false` boards are skipped, never counted as zero flights.
+
+### Airport card
+
+`MainWindow::refreshCard(i)` pushes `SiteData`, `rateLimitPaused()` and the
+`Airport` found by `AirportRegistry::find(site.code)` (case-insensitive;
+no match → gaps) into `SiteCard`, on site updates, pause edges and
+`airportsChanged`. The card draws the `cardBadge()` badge, city, country
+text (no flags), a clock only when `Airport::timeZone` is a valid
+`QTimeZone`, `---` for any `known=false` board, and the "updated" stamp only
+when `boardsFetchedUtc` is valid. Clock and age are read at paint time and
+repaint only on the minute gate. `TrendChart` is unaffected (it still reads
+the history); the old load gauge/sparkline were removed from the card.
 
 ### Airport learning (feed hook)
 

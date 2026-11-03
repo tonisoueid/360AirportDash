@@ -82,13 +82,19 @@ offscreen) in the container before it is written. macOS is not a target.
 ## Architecture
 
 Data flows one way: `SiteRegistry` (roster) → `FeedService` (polling) →
-`MainWindow` (alert diffing, wiring) → `SiteCard` / `TrendChart` / `EventLog`
+`MainWindow` (alert diffing, wiring) → `SiteCard` (one per airport) / `TrendChart` / `EventLog`
 (painting). Details and rationale: **docs/architecture.md** (patterns: the
 feed seam, generation counter, stale semantics, alert diffing, history
 window). Short version:
 
 - **`src/SiteData.h`** — shared header: data model, default roster, watch
   rules (`evaluateAlerts`). To add or tune an alert, edit it here.
+- **`src/SiteCard`** — per-airport card: ICAO, status badge
+  (`cardBadge()`), city/country text, local clock (IANA zone; none if
+  empty/invalid), arrivals/departures (`---` when the board is unknown),
+  "updated N min ago" (none without a fetch). `MainWindow::refreshCard()`
+  feeds it data, pause state and `AirportRegistry::find()` metadata; clock
+  and age repaint only on the minute gate.
 - **`src/SiteRegistry`** — roster persisted as `sites.json` (QSaveFile,
   corrupt → defaults). **Site indexes change after a swap
   (`sitesReconfigured`) — never cache indexes across it.**

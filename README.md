@@ -26,11 +26,11 @@ live.
 
 ## What you get
 
-- **Site matrix** — custom-painted instrument tiles: site name + code,
-  online indicator, primary-metric readout and trend chip, segmented
-  0–100 gauge on a cold→hot ramp with threshold ticks, metric rows,
-  trailing sparkline with HI/LO, and a data-age footer. Pending sites
-  render explicit dashed placeholders — **measured, never invented**.
+- **Site matrix** — custom-painted airport cards: ICAO, city and country
+  text, local clock from the airport's IANA zone, arrivals and departures
+  counts, a status badge (live / quiet / stale / error / paused) and an
+  "updated N min ago" stamp. Unknown values render `---` and a missing
+  time zone or fetch draws nothing — **measured, never invented**.
 - **Analysis trace** — dual-scale history chart (two series, independent
   axes), subtle graticule, dashed LATEST cursor with chip readout,
   MIN/MAX annotations, self-describing legend.
