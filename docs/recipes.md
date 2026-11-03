@@ -73,6 +73,15 @@ Notes:
   is the same: schedule/answer however you like, then call
   `applySample`/`applyFailure`.
 
+### Airport hooks
+
+If your feed names airports, call `airportSeen(icao)` for each ICAO in the
+reply (before or after `applySample`); unknown ones are learned into
+`airports.json` with the ICAO only. Implement `requestAirportFill()` to
+start a directory fill and call `completeAirportFill()` when it succeeds
+(only then is the damaged-file refill flag cleared). On failure, don't
+call it — the flag stays set and the next start retries.
+
 ---
 
 ## 2. Add a data domain (a metric)

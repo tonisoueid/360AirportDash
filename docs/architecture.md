@@ -98,6 +98,23 @@ crash never truncates it) under `AppConfigLocation`
 invalid file falls back to the built-in defaults and logs a WARN — the
 console always boots.
 
+### Airport learning (feed hook)
+
+`AirportRegistry` (airports.json, seeded from the compiled-in table) is
+owned by `MainWindow` and driven only by what the feed reports:
+
+- `FeedService::airportSeen(icao)` — call it whenever a sample or state
+  names an ICAO. It normalises and emits `airportReported`; `MainWindow`
+  calls `AirportRegistry::addLearned()` (a no-op for known ICAOs).
+- After a corrupt `airports.json`, `needsRefill()` stays true (saving a
+  learned entry does not clear it). `MainWindow` calls
+  `FeedService::requestAirportFill()` at startup (not offline); the real
+  client calls `completeAirportFill()` when done, which emits
+  `airportFillCompleted` and `MainWindow` then calls `clearRefill()`.
+- Shipped stubs: `requestAirportFill()` does nothing and nothing calls
+  `airportSeen()`, so no airport is learned and the refill flag is never
+  cleared until a client exists (invariant 2).
+
 ### Calm UI
 
 Cards repaint on data updates and a minute tick, not per second; the only

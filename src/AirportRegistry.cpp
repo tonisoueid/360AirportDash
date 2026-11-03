@@ -110,7 +110,6 @@ bool AirportRegistry::save()
     f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     if (!f.commit())
         return false;
-    m_needsRefill = false;
     return true;
 }
 

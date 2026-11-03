@@ -22,8 +22,10 @@ public:
     LoadResult load();
 
     // True after a corrupt/unparsable file forced a seed fallback, so the
-    // feed fill can run again. Cleared by a successful save.
+    // feed fill can run again. Stays set (even across addLearned/save) until the
+    // feed fill completes and the caller invokes clearRefill().
     bool needsRefill() const { return m_needsRefill; }
+    void clearRefill() { m_needsRefill = false; }
 
     // No-op if the ICAO is already known (case-insensitive). Otherwise appends
     // an ICAO-only entry (stored upper-case), saves, emits airportsChanged().

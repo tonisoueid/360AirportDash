@@ -19,6 +19,7 @@ class QScrollArea;
 class QSplitter;
 class QWidget;
 class SiteRegistry;
+class AirportRegistry;
 
 // ----------------------------------------------------------------------------
 // Main operations console:
@@ -75,6 +76,7 @@ private:
 
     FeedService *m_service = nullptr;
     SiteRegistry *m_registry = nullptr;
+    AirportRegistry *m_airports = nullptr;
     QGridLayout *m_grid = nullptr;
     QWidget *m_gridHost = nullptr;
     QScrollArea *m_gridScroll = nullptr;
