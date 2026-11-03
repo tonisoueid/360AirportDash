@@ -17,6 +17,8 @@ add_executable(360AirportDash
     src/AirportSeed.cpp
     src/AirportSearch.h
     src/AirportSearch.cpp
+    src/AirportRegistry.h
+    src/AirportRegistry.cpp
     src/SiteRegistry.h
     src/SiteRegistry.cpp
     src/FeedService.h
