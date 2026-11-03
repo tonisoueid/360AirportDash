@@ -4,12 +4,14 @@
 #include "SiteRegistry.h"
 #include "Theme.h"
 #include <QApplication>
+#include <QCheckBox>
 #include <QCommandLineParser>
 #include <QDateTime>
 #include <QGuiApplication>
 #include <QLineEdit>
 #include <QPalette>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QTimer>
 #include <QWidget>
 
@@ -121,6 +123,10 @@ int main(int argc, char *argv[])
             set("codeEdit", QStringLiteral("ENGM"));
             set("regionEdit", QStringLiteral("EU"));
             set("endpointEdit", QStringLiteral("https://example.com/api/v1/nodes/osl1"));
+            if (auto *p = dlg->findChild<QSpinBox *>(QStringLiteral("pollSpin")))
+                p->setValue(600);
+            if (auto *c = dlg->findChild<QCheckBox *>(QStringLiteral("pinnedCheck")))
+                c->setChecked(true);
             if (auto *b = dlg->findChild<QPushButton *>(QStringLiteral("addButton")))
                 b->click();
         });
