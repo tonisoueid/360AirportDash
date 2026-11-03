@@ -41,8 +41,10 @@ live.
   next-scan countdown and uptime; hotkeys (`R` rescan, `1`–`9` / arrows
   select, `Ctrl+E` admin, `Ctrl+Q` quit); draggable body seam and
   per-panel expand.
-- **Site admin** — roster editor (add / update / remove / reorder /
-  reset), persisted to the user's config dir with crash-safe writes and
+- **Site admin** — roster editor (add by 4-letter ICAO code / update /
+  remove / reorder / reset) with per-entry ENABLED, PINNED and poll-interval
+  fields; duplicate ICAOs are rejected and a known IATA code (e.g. `CDG`)
+  shows a `CDG → LFPG` hint instead of being added. Persisted to the user's config dir with crash-safe writes and
   corrupt-file fallback to defaults. Roster is hot-swappable at runtime:
   samples survive an edit, superseded in-flight replies are retired.
 - **Packaging** — one-liner Docker builds for a self-contained Linux

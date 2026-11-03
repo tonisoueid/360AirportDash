@@ -30,7 +30,7 @@ only paint what they are handed.
 | `src/SiteCard.{h,cpp}` | Per-site instrument tile, custom `QPainter`. |
 | `src/widgets/TrendChart.{h,cpp}` | Dual-scale history trace for the selected site. |
 | `src/EventLog.{h,cpp}` | Timestamped UTC log, capped at 300 lines. |
-| `src/AdminDialog.{h,cpp}` | Roster editor (table + form). Only stylesheet user. |
+| `src/AdminDialog.{h,cpp}` | Roster editor (table + form). ICAO-only Add/Update, duplicate rejection, ENABLED/PINNED/poll-interval editing, IATA→ICAO hint (`iataToIcao()` in `src/AirportSearch`). Only stylesheet user. |
 | `src/widgets/Panel`, `ExpandButton`, `BodySplitter` | Captioned card chrome, caption-corner expand, draggable body seam. |
 | `src/widgets/IconGlyph.h` | Deterministic SVG-path parser + verbatim Bootstrap Icons artwork. |
 | `src/Theme.h` | Palette, typography, drawing primitives — the design system. |
@@ -129,7 +129,7 @@ Built-in headless modes (always `QT_QPA_PLATFORM=offscreen`):
 - `--offline` — link-down drill, no polling, `R` disabled
 - `--grab FILE` — render one frame after the first scan completes
   (30 s fallback exit; give `--offline --grab` runs an outer timeout ≥ 45 s)
-- `--grab-admin PREFIX` — scripted admin-dialog add + save, screenshots to
+- `--grab-admin PREFIX` — scripted admin-dialog add (ICAO, pinned, 600 s poll) + save, screenshots to
   `PREFIX-*.png`
 - `--icon FILE` — render the 256 px app icon
 
