@@ -101,8 +101,9 @@ Details, bundle policies and verification: [docs/packaging.md](docs/packaging.md
 [docs/recipes.md](docs/recipes.md) walks through the four common changes —
 each names the exact seams:
 
-- **Wire a feed** — `FeedService::pollSite()` is wired to OpenSky; replace it to use another source;
-  `applySample()` / `applyFailure()` do the rest.
+- **Wire a feed** — `FeedService::pollSite()` is already wired to OpenSky;
+  replace it to use another source. `applySample()` / `applyFailure()` do
+  the rest.
 - **Add a data domain** — model field → feed parse → card row → chart
   series → watch rule, with a claimed accent.
 - **Add a watch rule** — a guarded threshold in `evaluateAlerts()` with a

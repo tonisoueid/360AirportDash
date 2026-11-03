@@ -100,6 +100,26 @@ crash never truncates it) under `AppConfigLocation`
 invalid file falls back to the built-in defaults and logs a WARN — the
 console always boots.
 
+### OpenSky feed (`FeedService::pollSite`)
+
+- Per site ICAO (`Site::code`) it requests `/flights/departure`, then — only
+  with `OpenSkyAuth` credentials — `/flights/arrival`, over the trailing
+  `kWindowSecs` (24 h). Requests for one site are sequential, so a site has
+  at most one request or wait pending.
+- **Anonymous mode** (no credentials): no auth header, departures only; the
+  arrivals board stays `known=false` (a gap, never "empty").
+- **Outcomes**: every poll ends in exactly one `applySample` / `applyFailure`
+  (scan-queue bookkeeping). 404 + `[]` is a known-empty board. Other 4xx and
+  transport errors fail the board; both boards failing → `applyFailure`
+  (last good sample kept, state Stale/Error). One board ok + one failed →
+  `applySample` with the failed board left unknown.
+- **429**: `Retry-After` (or `X-Rate-Limit-Retry-After-Seconds`, default
+  60 s, max 3600 s) sets a global pause on all OpenSky requests; the board is
+  retried after the delay, failing after `kMax429Retries`. **5xx**: retried
+  once, then the board fails.
+- A roster swap bumps the generation counter and cancels the per-site
+  timers; late replies are dropped. `--offline` never starts polling.
+
 ### Airport learning (feed hook)
 
 `AirportRegistry` (airports.json, seeded from the compiled-in table) is
