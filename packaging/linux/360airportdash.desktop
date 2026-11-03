@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=DashboardTemplate
+Name=360AirportDash
 GenericName=Telemetry Dashboard
 Comment=Multi-site telemetry operations console (Qt 6 template)
-Exec=DashboardTemplate
-Icon=dashboardtemplate
+Exec=360AirportDash
+Icon=360airportdash
 Terminal=false
 Categories=Utility;Monitor;
-StartupWMClass=dashboardtemplate
+StartupWMClass=360airportdash

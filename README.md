@@ -69,15 +69,15 @@ Requires Qt 6 (Widgets + Network), CMake ≥ 3.21, a C++20 compiler.
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/DashboardTemplate
+./build/360AirportDash
 ```
 
 Useful flags (see `--help`):
 
 ```bash
-./build/DashboardTemplate --offline            # link-down drill, no polling
-./build/DashboardTemplate --grab frame.png     # render one frame after the first scan, then exit
-./build/DashboardTemplate --icon icon.png      # render the app icon, then exit
+./build/360AirportDash --offline            # link-down drill, no polling
+./build/360AirportDash --grab frame.png     # render one frame after the first scan, then exit
+./build/360AirportDash --icon icon.png      # render the app icon, then exit
 ```
 
 ## Packaging
@@ -88,8 +88,8 @@ Ninja + python3 needed for icon rendering.
 
 | Target | Command | Artifact |
 |---|---|---|
-| Linux x86_64 | `packaging/linux/build-linux.sh` | `dist/DashboardTemplate-<ver>-linux-x86_64.tar.gz` |
-| Windows 10/11 x64 | `packaging/windows/build-win64.sh` | `dist/DashboardTemplate-<ver>-win64.zip` |
+| Linux x86_64 | `packaging/linux/build-linux.sh` | `dist/360AirportDash-<ver>-linux-x86_64.tar.gz` |
+| Windows 10/11 x64 | `packaging/windows/build-win64.sh` | `dist/360AirportDash-<ver>-win64.zip` |
 
 Details, bundle policies and verification: [docs/packaging.md](docs/packaging.md).
 

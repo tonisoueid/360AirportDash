@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # ----------------------------------------------------------------------------
-# Build a self-contained Linux x86_64 package of DashboardTemplate — via Docker.
+# Build a self-contained Linux x86_64 package of 360AirportDash — via Docker.
 #
 #   ./packaging/linux/build-linux.sh
 #
 # Builds in a Fedora 43 container (Qt 6.10.x, same series as the Windows
 # plugins next to the executable. Produces:
 #
-#   dist/DashboardTemplate-0.1.0-linux-x86_64/      runnable folder
-#   dist/DashboardTemplate-0.1.0-linux-x86_64.tar.gz  the shippable artifact
+#   dist/360AirportDash-0.1.0-linux-x86_64/      runnable folder
+#   dist/360AirportDash-0.1.0-linux-x86_64.tar.gz  the shippable artifact
 #
-# Layout:  DashboardTemplate (launcher) · bin/ (exe + qt.conf) · lib/ · plugins/
+# Layout:  360AirportDash (launcher) · bin/ (exe + qt.conf) · lib/ · plugins/
 #          share/ (hicolor icons + .desktop) · install-desktop.sh (dock icon)
 # The launcher sets LD_LIBRARY_PATH to lib/, so no patchelf / post-link edits.
 #
@@ -24,8 +24,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 VER=0.1.0
-IMAGE=dashboardtemplate-linux-build:latest
-NAME=DashboardTemplate-$VER-linux-x86_64
+IMAGE=360airportdash-linux-build:latest
+NAME=360AirportDash-$VER-linux-x86_64
 
 mkdir -p dist
 
@@ -57,8 +57,8 @@ cmake --build /tmp/b
 
 rm -rf "$D"
 mkdir -p "$D"/{bin,lib,plugins}
-cp /tmp/b/DashboardTemplate "$D/bin/"
-strip "$D/bin/DashboardTemplate"
+cp /tmp/b/360AirportDash "$D/bin/"
+strip "$D/bin/360AirportDash"
 for p in platforms tls networkinformation styles imageformats xcbglintegrations \
          wayland-decoration-client wayland-graphics-integration-client \
          wayland-shell-integration iconengines; do
@@ -82,34 +82,34 @@ for _ in 1 2 3 4 5; do
         cp -L "$lib" "$D/lib/"; new=1
       fi
     done < <(ldd "$f" | sed -n "s/.*=> \(\/[^ ]*\) .*/\1/p")
-  done < <(find "$D/bin" "$D/plugins" "$D/lib" -type f \( -name "*.so*" -o -name DashboardTemplate \))
+  done < <(find "$D/bin" "$D/plugins" "$D/lib" -type f \( -name "*.so*" -o -name 360AirportDash \))
   [ "$new" = 0 ] && break
 done
 
 # Final gate: nothing may be unresolved when only lib/ is on the path.
-for f in "$D/bin/DashboardTemplate" "$D"/plugins/platforms/*.so; do
+for f in "$D/bin/360AirportDash" "$D"/plugins/platforms/*.so; do
   if LD_LIBRARY_PATH="$D/lib" ldd "$f" | grep -q "not found"; then
     echo "UNRESOLVED in $f"; LD_LIBRARY_PATH="$D/lib" ldd "$f" | grep "not found"; exit 1
   fi
 done
 
-cat > "$D/DashboardTemplate" <<"LAUNCH"
+cat > "$D/360AirportDash" <<"LAUNCH"
 #!/bin/sh
 here=$(dirname "$(readlink -f "$0")")
 export LD_LIBRARY_PATH="$here/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-exec "$here/bin/DashboardTemplate" "$@"
+exec "$here/bin/360AirportDash" "$@"
 LAUNCH
-chmod +x "$D/DashboardTemplate"
+chmod +x "$D/360AirportDash"
 
 # Desktop integration: hicolor icons + launcher entry, installed per-user by
 # install-desktop.sh (the .desktop Exec path is absolute, so it is rewritten
 # at install time to wherever the folder was extracted).
 for px in 16 24 32 48 64 128 256 512; do
   mkdir -p "$D/share/icons/hicolor/${px}x${px}/apps"
-  cp /icons/icon-$px.png "$D/share/icons/hicolor/${px}x${px}/apps/dashboardtemplate.png"
+  cp /icons/icon-$px.png "$D/share/icons/hicolor/${px}x${px}/apps/360airportdash.png"
 done
 mkdir -p "$D/share/applications"
-cp /src/packaging/linux/dashboardtemplate.desktop "$D/share/applications/"
+cp /src/packaging/linux/360airportdash.desktop "$D/share/applications/"
 cat > "$D/install-desktop.sh" <<"INST"
 #!/bin/sh
 # Install the launcher entry and icons for the current user (dock/app menu).
@@ -118,16 +118,16 @@ here=$(dirname "$(readlink -f "$0")")
 data=${XDG_DATA_HOME:-$HOME/.local/share}
 mkdir -p "$data/applications"
 cp -r "$here/share/icons" "$data/"
-sed "s|^Exec=.*|Exec=$here/DashboardTemplate|" \
-  "$here/share/applications/dashboardtemplate.desktop" > "$data/applications/dashboardtemplate.desktop"
+sed "s|^Exec=.*|Exec=$here/360AirportDash|" \
+  "$here/share/applications/360airportdash.desktop" > "$data/applications/360airportdash.desktop"
 command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t "$data/icons/hicolor" || true
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q "$data/applications" || true
-echo "Installed DashboardTemplate launcher entry in $data"
+echo "Installed 360AirportDash launcher entry in $data"
 INST
 chmod +x "$D/install-desktop.sh"
 
 # Smoke test with the bundled libs/plugins only (offscreen, no network).
-QT_QPA_PLATFORM=offscreen timeout 60 "$D/DashboardTemplate" --offline --grab /tmp/smoke.png
+QT_QPA_PLATFORM=offscreen timeout 60 "$D/360AirportDash" --offline --grab /tmp/smoke.png
 [ -s /tmp/smoke.png ] || { echo "SMOKE TEST FAILED: no frame"; exit 1; }
 
 cd /out
@@ -136,4 +136,4 @@ tar -czf "$NAME.tar.gz" "$NAME"
 du -sh "$NAME" "$NAME.tar.gz"
 '
 
-echo "OK: dist/$NAME.tar.gz (extract, then run ./$NAME/DashboardTemplate)"
+echo "OK: dist/$NAME.tar.gz (extract, then run ./$NAME/360AirportDash)"

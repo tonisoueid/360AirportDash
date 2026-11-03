@@ -46,7 +46,7 @@ static QString adminBtnStyle()
 MainWindow::MainWindow(bool offline, QWidget *parent)
     : QMainWindow(parent), m_offline(offline)
 {
-    setWindowTitle(QStringLiteral("DashboardTemplate — Operations Console"));
+    setWindowTitle(QStringLiteral("360AirportDash — Operations Console"));
     // two card columns + the analysis column + collapse bars
     setMinimumSize(1330, 800);
     resize(1680, 940);
@@ -174,7 +174,7 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
     else
         applyLinkChip(true);
 
-    m_log->log(QStringLiteral("INFO"), QStringLiteral("DashboardTemplate"),
+    m_log->log(QStringLiteral("INFO"), QStringLiteral("360AirportDash"),
                QStringLiteral("System online — %1 sites registered, watch rules armed")
                    .arg(m_service->siteCount()), Theme::Green);
     if (rosterLoad == SiteRegistry::LoadResult::File) {
@@ -216,7 +216,7 @@ QWidget *MainWindow::buildHeader()
         return l;
     };
 
-    QLabel *mast = mkLabel(QStringLiteral("DashboardTemplate"), 20, true, Theme::Text);
+    QLabel *mast = mkLabel(QStringLiteral("360AirportDash"), 20, true, Theme::Text);
     QLabel *sub = mkLabel(QStringLiteral("MULTI-SITE TELEMETRY CONSOLE"), 12, false, Theme::TextMuted);
     lay->addWidget(mast);
     lay->addWidget(sub);
@@ -312,7 +312,7 @@ void MainWindow::onSecondTick()
     // scheduled sweep: fire when the countdown expires and no scan is running
     if (!m_offline && m_firstScanDone && nowUtc >= m_nextScanUtc
         && !m_service->scanActive()) {
-        m_log->log(QStringLiteral("INFO"), QStringLiteral("DashboardTemplate"),
+        m_log->log(QStringLiteral("INFO"), QStringLiteral("360AirportDash"),
                    QStringLiteral("Scheduled scan cycle — %1 sites")
                        .arg(m_service->siteCount()));
         m_service->rescan();
@@ -380,7 +380,7 @@ void MainWindow::onScanProgress(int done, int total)
         for (const SiteData &d : m_service->all())
             if (d.state == SiteData::State::Live) ++live;
         m_log->log(live == total ? QStringLiteral("INFO") : QStringLiteral("WARN"),
-                   QStringLiteral("DashboardTemplate"),
+                   QStringLiteral("360AirportDash"),
                    QStringLiteral("Scan complete — %1/%2 sites reporting").arg(live).arg(total),
                    live == total ? Theme::Green : Theme::Amber);
         if (live == 0)
@@ -475,7 +475,7 @@ void MainWindow::setSectionFocus(SectionFocus f)
     m_traceBtn->setExpanded(trace);
     m_logBtn->setExpanded(log);
 
-    m_log->log(QStringLiteral("INFO"), QStringLiteral("DashboardTemplate"),
+    m_log->log(QStringLiteral("INFO"), QStringLiteral("360AirportDash"),
                f == SectionFocus::None
                    ? QStringLiteral("Console view restored")
                    : QStringLiteral("%1 expanded to full view")
@@ -654,7 +654,7 @@ void MainWindow::runAlertRules(int idx)
 void MainWindow::keyPressEvent(QKeyEvent *e)
 {
     if (e->key() == Qt::Key_R && !m_offline) {
-        m_log->log(QStringLiteral("INFO"), QStringLiteral("DashboardTemplate"),
+        m_log->log(QStringLiteral("INFO"), QStringLiteral("360AirportDash"),
                    QStringLiteral("Manual rescan requested by operator"));
         m_eventCount = m_eventCount + 1;
         m_service->rescan();

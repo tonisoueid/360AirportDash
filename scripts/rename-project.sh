@@ -11,9 +11,9 @@
 #                .desktop file, icon name, Wayland app id and config dir.
 #
 # Replaces the two identity tokens across every tracked text file:
-#   DashboardTemplate  -> NewName        (CMake project/target, window title,
+#   360AirportDash  -> NewName        (CMake project/target, window title,
 #                                         log source, packaging artifacts)
-#   dashboardtemplate  -> lowercase-id   (.desktop file + Icon=, StartupWMClass,
+#   360airportdash  -> lowercase-id   (.desktop file + Icon=, StartupWMClass,
 #                                         desktopFileName, Docker image names)
 # then renames packaging/linux/<id>.desktop to match. Re-run any time; it is
 # idempotent per name pair.
@@ -24,8 +24,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OLD_PC=DashboardTemplate
-OLD_LC=dashboardtemplate
+OLD_PC=360AirportDash
+OLD_LC=360airportdash
 
 NEW_PC="${1:?usage: scripts/rename-project.sh NewName [lowercase-id]}"
 VERIFY=1

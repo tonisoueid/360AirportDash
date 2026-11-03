@@ -6,9 +6,9 @@ first use; the Fedora 43 base layers cache across both targets.
 
 | Target | Command | Artifact |
 |---|---|---|
-| Linux x86_64 | `packaging/linux/build-linux.sh` | `dist/DashboardTemplate-<ver>-linux-x86_64.tar.gz` |
-| Windows 10/11 x64 | `packaging/windows/build-win64.sh` | `dist/DashboardTemplate-<ver>-win64.zip` (~40 MB) |
-| Linux (dev) | plain cmake build | `build/DashboardTemplate` |
+| Linux x86_64 | `packaging/linux/build-linux.sh` | `dist/360AirportDash-<ver>-linux-x86_64.tar.gz` |
+| Windows 10/11 x64 | `packaging/windows/build-win64.sh` | `dist/360AirportDash-<ver>-win64.zip` (~40 MB) |
+| Linux (dev) | plain cmake build | `build/360AirportDash` |
 
 If a change breaks cross-compilation, the change is wrong, not the scripts.
 

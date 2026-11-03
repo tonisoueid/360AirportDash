@@ -40,14 +40,14 @@ int main(int argc, char *argv[])
     pal.setColor(QPalette::Disabled, QPalette::ButtonText, Theme::TextFaint);
     pal.setColor(QPalette::Disabled, QPalette::WindowText, Theme::TextFaint);
     QApplication::setPalette(pal);
-    QApplication::setApplicationName(QStringLiteral("DashboardTemplate"));
+    QApplication::setApplicationName(QStringLiteral("360AirportDash"));
     QApplication::setApplicationVersion(QStringLiteral("0.1.0"));
     QApplication::setWindowIcon(AppIcon::icon());
-    // matches dashboardtemplate.desktop on Wayland docks (app id → launcher entry)
-    QGuiApplication::setDesktopFileName(QStringLiteral("dashboardtemplate"));
+    // matches 360airportdash.desktop on Wayland docks (app id → launcher entry)
+    QGuiApplication::setDesktopFileName(QStringLiteral("360airportdash"));
 
     QCommandLineParser cli;
-    cli.setApplicationDescription(QStringLiteral("DashboardTemplate — multi-site telemetry operations console"));
+    cli.setApplicationDescription(QStringLiteral("360AirportDash — multi-site telemetry operations console"));
     cli.addHelpOption();
     cli.addVersionOption();
     QCommandLineOption grabOpt(QStringLiteral("grab"),

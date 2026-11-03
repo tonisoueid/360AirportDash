@@ -56,7 +56,7 @@ QString countChipStyle()
 AdminDialog::AdminDialog(const QVector<Site> &sites, QWidget *parent)
     : QDialog(parent), m_sites(sites)
 {
-    setWindowTitle(QStringLiteral("DashboardTemplate — Site Administration"));
+    setWindowTitle(QStringLiteral("360AirportDash — Site Administration"));
     setModal(true);
     setMinimumSize(880, 640);
     resize(920, 680);

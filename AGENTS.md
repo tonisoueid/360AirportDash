@@ -10,7 +10,7 @@ Qt 6 / C++20 desktop template for NOC-style telemetry dashboards: an
 editable roster of watched sites, a staggered polling service, watch rules
 that log raise and clear, and a fully custom-painted dark console
 (charcoal-blue chassis, one saturated accent per data domain, no bitmap
-assets). One executable, `DashboardTemplate`.
+assets). One executable, `360AirportDash`.
 
 **Ships with an unwired feed seam**: `FeedService::pollSite()` is a
 documented stub — no network calls are made and every site renders its
@@ -26,7 +26,7 @@ render + measurement (below) — preserve those modes.
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/DashboardTemplate
+./build/360AirportDash
 ```
 
 Requires Qt 6 (Widgets + Network dev packages), CMake ≥ 3.21.
@@ -67,9 +67,9 @@ docs/design-system.md.
 
 | Target | Command | Artifact |
 |---|---|---|
-| Windows 10/11 x64 | `packaging/windows/build-win64.sh` | `dist/DashboardTemplate-0.1.0-win64.zip` |
-| Linux x86_64 | `packaging/linux/build-linux.sh` | `dist/DashboardTemplate-0.1.0-linux-x86_64.tar.gz` |
-| Linux (dev) | the plain cmake build above | `build/DashboardTemplate` |
+| Windows 10/11 x64 | `packaging/windows/build-win64.sh` | `dist/360AirportDash-0.1.0-win64.zip` |
+| Linux x86_64 | `packaging/linux/build-linux.sh` | `dist/360AirportDash-0.1.0-linux-x86_64.tar.gz` |
+| Linux (dev) | the plain cmake build above | `build/360AirportDash` |
 
 Both scripts run in Docker (Fedora 43 base; images build on first use) and
 need host Qt 6 Gui + CMake + Ninja + python3 for icon rendering

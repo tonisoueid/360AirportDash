@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ----------------------------------------------------------------------------
-# Cross-build DashboardTemplate.exe for Windows 10/11 x64 — from Linux, via Docker.
+# Cross-build 360AirportDash.exe for Windows 10/11 x64 — from Linux, via Docker.
 #
 #   ./packaging/windows/build-win64.sh
 #
@@ -8,8 +8,8 @@
 # Linux build). Linux moc/rcc host tools run natively — no Wine needed at
 # build time. Produces:
 #
-#   dist/DashboardTemplate-0.1.0-win64/      runnable folder (exe + Qt DLLs + plugins)
-#   dist/DashboardTemplate-0.1.0-win64.zip   the shippable artifact (~40 MB)
+#   dist/360AirportDash-0.1.0-win64/      runnable folder (exe + Qt DLLs + plugins)
+#   dist/360AirportDash-0.1.0-win64.zip   the shippable artifact (~40 MB)
 #
 # DLL deployment is a fixpoint pass: every non-system DLL import of the exe,
 # Qt libs and plugins is copied from the Fedora sysroot until the closure
@@ -19,15 +19,15 @@
 #   docker run --rm -v $PWD/dist:/dist:ro -v /tmp/wt:/t ubuntu:26.04 bash -c '
 #     apt-get update -qq && apt-get install -y -qq wine64 file ca-certificates
 #     export WINEPREFIX=/t/wp WINEDEBUG=-all
-#     cp -r /dist/DashboardTemplate-0.1.0-win64 /t/app && cd /t/app && wineboot --init
+#     cp -r /dist/360AirportDash-0.1.0-win64 /t/app && cd /t/app && wineboot --init
 #     # fresh prefix + system CAs => schannel TLS works once a feed is wired:
-#     wine DashboardTemplate.exe --grab Z:\\t\\frame.png'
+#     wine 360AirportDash.exe --grab Z:\\t\\frame.png'
 # ----------------------------------------------------------------------------
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 VER=0.1.0
-IMAGE=dashboardtemplate-win-cross:latest
+IMAGE=360airportdash-win-cross:latest
 
 # Taskbar/Explorer icon: rendered on the host from the app's own AppIcon painter.
 ICONS=$(mktemp -d)
@@ -47,7 +47,7 @@ docker run --rm \
   -v "$ICONS:/icons:ro" \
   "$IMAGE" bash -euxo pipefail -c '
 SYS=/usr/x86_64-w64-mingw32/sys-root/mingw
-D=/out/DashboardTemplate-'"$VER"'-win64
+D=/out/360AirportDash-'"$VER"'-win64
 
 cmake -S /src -B /tmp/b -GNinja -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE=/usr/share/mingw/toolchain-mingw64.cmake \
@@ -56,7 +56,7 @@ cmake --build /tmp/b
 
 rm -rf "$D"
 mkdir -p "$D"/{platforms,tls,networkinformation,styles}
-cp /tmp/b/DashboardTemplate.exe "$D/"
+cp /tmp/b/360AirportDash.exe "$D/"
 cp "$SYS"/bin/Qt6{Core,Gui,Network,Widgets}.dll "$D/"
 cp "$SYS"/lib/qt6/plugins/platforms/qwindows.dll           "$D/platforms/"
 cp "$SYS"/lib/qt6/plugins/tls/*.dll                        "$D/tls/"
@@ -94,9 +94,9 @@ for f in "$D"/*.dll "$D"/{platforms,tls,networkinformation,styles}/*.dll "$D"/*.
 done
 
 cd /out
-rm -f DashboardTemplate-'"$VER"'-win64.zip
-zip -qr DashboardTemplate-'"$VER"'-win64.zip DashboardTemplate-'"$VER"'-win64
-du -sh DashboardTemplate-'"$VER"'-win64{,.zip}
+rm -f 360AirportDash-'"$VER"'-win64.zip
+zip -qr 360AirportDash-'"$VER"'-win64.zip 360AirportDash-'"$VER"'-win64
+du -sh 360AirportDash-'"$VER"'-win64{,.zip}
 '
 
-echo "OK: dist/DashboardTemplate-$VER-win64.zip (unzip, then run DashboardTemplate.exe)"
+echo "OK: dist/360AirportDash-$VER-win64.zip (unzip, then run 360AirportDash.exe)"
