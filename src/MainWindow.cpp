@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "AdminDialog.h"
+#include "AirportRegistry.h"
 #include "EventLog.h"
 #include "SiteCard.h"
 #include "SiteRegistry.h"
@@ -63,6 +64,19 @@ MainWindow::MainWindow(bool offline, QWidget *parent)
     connect(m_registry, &SiteRegistry::sitesChanged, this, [this] {
         m_service->setSites(m_registry->sites());
     });
+
+    // Airport directory: learn ICAOs only as the feed reports them, and
+    // refill after a damaged airports.json once the feed says it finished.
+    m_airports = new AirportRegistry(this);
+    m_airports->load();
+    connect(m_service, &FeedService::airportReported, this, [this](const QString &icao) {
+        m_airports->addLearned(icao);   // no-op for known ICAOs
+    });
+    connect(m_service, &FeedService::airportFillCompleted, this, [this] {
+        m_airports->clearRefill();
+    });
+    if (m_airports->needsRefill() && !m_offline)
+        m_service->requestAirportFill();
 
     // ---------------------------------------------------------------- layout
     QWidget *central = new QWidget;

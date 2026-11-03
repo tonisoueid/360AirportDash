@@ -114,6 +114,24 @@ void FeedService::pollSite(int idx)
     finishPoll(idx);
 }
 
+void FeedService::airportSeen(const QString &icao)
+{
+    const QString key = icao.trimmed().toUpper();
+    if (!key.isEmpty())
+        emit airportReported(key);
+}
+
+void FeedService::requestAirportFill()
+{
+    // Stub: no feed client exists yet, so no fill can run and none is
+    // reported as done. Replace with the real fill kick-off.
+}
+
+void FeedService::completeAirportFill()
+{
+    emit airportFillCompleted();
+}
+
 void FeedService::applySample(int idx, const Sample &s)
 {
     if (idx < 0 || idx >= siteCount())

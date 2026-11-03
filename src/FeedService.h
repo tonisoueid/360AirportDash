@@ -52,6 +52,11 @@ signals:
     void linkStatusChanged(bool online);
     void sitesReconfigured();             // roster swapped; indexes are new
 
+    // Airport-directory hooks (see docs/architecture.md "Airport learning").
+    // Emitted only when the feed actually reports something.
+    void airportReported(const QString &icao);   // feed named this ICAO
+    void airportFillCompleted();                 // a requested fill finished
+
 public:
     // -- seam API: call these from your poll implementation -----------------
 
@@ -64,6 +69,18 @@ public:
     // Stale (was Live) or Error (never answered), drops the link flag, and
     // completes the poll's scan-queue bookkeeping.
     void applyFailure(int idx, const QString &error);
+
+    // Airport seam: call from your poll/client code whenever a sample or
+    // state names an ICAO. Normalises (trim, upper-case), drops blanks, and
+    // emits airportReported(); the listener decides whether it is unknown.
+    void airportSeen(const QString &icao);
+
+    // Ask the feed to refill the airport directory (used after a damaged
+    // airports.json). STUB: no client is wired, so nothing is requested and
+    // airportFillCompleted() is never emitted. A real client calls
+    // completeAirportFill() once its fill has finished.
+    void requestAirportFill();
+    void completeAirportFill();
 
 private:
     void advanceScan();
