@@ -38,6 +38,10 @@ public:
     void start();                        // kick off the first scan
     void rescan();                       // full sweep now
     void pollSite(int idx);              // single-site poll (FEED SEAM)
+    // Real re-poll of one site (detail-pane refresh). Returns false (no-op)
+    // for a bad index, a poll already in flight, or an active 429 pause.
+    // Does not count toward scan progress. Callers must not use it offline.
+    bool refreshSite(int idx);
     void setSites(const QVector<Site> &sites);   // hot roster swap
 
     int siteCount() const { return int(m_data.size()); }
@@ -119,6 +123,7 @@ private:
     };
     struct PollState {
         bool busy = false;            // one in-flight poll per site
+        bool manual = false;          // refreshSite() poll: skip scan bookkeeping
         QTimer *timer = nullptr;      // per-site retry / rate-limit wait
         std::function<void()> onTimer;
     };
@@ -129,7 +134,8 @@ private:
     void armTimer(const std::shared_ptr<PollJob> &job, int ms, std::function<void()> fn);
     void completeJob(const std::shared_ptr<PollJob> &job);
     void advanceScan();
-    void finishPoll(int idx);             // scan-queue bookkeeping + signal
+    void finishPoll(int idx, bool countsScan);   // scan-queue bookkeeping + signal
+    bool takeCountsScan(int idx);
     void syncPauseState();                // emit on pause edge, arm lapse timer
 
     QVector<SiteData> m_data;

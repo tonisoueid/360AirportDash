@@ -113,6 +113,19 @@ void FeedService::resetPollState()
 // OpenSky feed. Per poll: fetch the departures board, then (authenticated
 // only) the arrivals board, sequentially so a site never has more than one
 // request or wait pending. Exactly one applySample()/applyFailure() ends it.
+bool FeedService::refreshSite(int idx)
+{
+    if (idx < 0 || idx >= siteCount() || idx >= m_poll.size())
+        return false;
+    if (m_poll[idx].busy || rateLimitPaused())
+        return false;
+    // Outside scan-queue bookkeeping: this poll must not count toward a
+    // sweep's progress.
+    m_poll[idx].manual = true;
+    pollSite(idx);
+    return true;
+}
+
 void FeedService::pollSite(int idx)
 {
     if (idx < 0 || idx >= siteCount())
@@ -121,7 +134,7 @@ void FeedService::pollSite(int idx)
     // One in-flight poll per site: a rescan landing on a busy site only
     // advances the queue bookkeeping; the running poll reports on its own.
     if (m_poll[idx].busy) {
-        finishPoll(idx);
+        finishPoll(idx, true);
         return;
     }
 
@@ -186,11 +199,12 @@ void FeedService::issueBoard(const std::shared_ptr<PollJob> &job, bool departure
     }
 
     const qint64 end = nowMs / 1000;
+    const qint64 begin = end - kWindowSecs;
     QUrl url(m_baseUrl + (departures ? QStringLiteral("/flights/departure")
                                      : QStringLiteral("/flights/arrival")));
     QUrlQuery q;
     q.addQueryItem(QStringLiteral("airport"), job->icao);
-    q.addQueryItem(QStringLiteral("begin"), QString::number(end - kWindowSecs));
+    q.addQueryItem(QStringLiteral("begin"), QString::number(begin));
     q.addQueryItem(QStringLiteral("end"), QString::number(end));
     url.setQuery(q);
 
@@ -199,7 +213,7 @@ void FeedService::issueBoard(const std::shared_ptr<PollJob> &job, bool departure
         req.setRawHeader("Authorization", "Bearer " + job->token.toUtf8());
 
     QNetworkReply *reply = m_net.get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, job, departures, reply] {
+    connect(reply, &QNetworkReply::finished, this, [this, job, departures, reply, begin, end] {
         reply->deleteLater();
         if (job->gen != m_generation)
             return;                              // roster swapped: drop
@@ -256,6 +270,9 @@ void FeedService::issueBoard(const std::shared_ptr<PollJob> &job, bool departure
         }
         b.done = true;
         b.ok = true;
+        // The window actually queried, recorded only on a measured board.
+        fb.windowBeginUtc = QDateTime::fromSecsSinceEpoch(begin, Qt::UTC);
+        fb.windowEndUtc = QDateTime::fromSecsSinceEpoch(end, Qt::UTC);
         b.board = fb;
         job->icaos += seen;
         advanceJob(job);
@@ -342,7 +359,7 @@ void FeedService::applySample(int idx, const Sample &s)
         m_linkOnline = true;
         emit linkStatusChanged(true);
     }
-    finishPoll(idx);
+    finishPoll(idx, takeCountsScan(idx));
 }
 
 void FeedService::applyFailure(int idx, const QString &error)
@@ -360,14 +377,23 @@ void FeedService::applyFailure(int idx, const QString &error)
         m_linkOnline = false;
         emit linkStatusChanged(false);
     }
-    finishPoll(idx);
+    finishPoll(idx, takeCountsScan(idx));
 }
 
-void FeedService::finishPoll(int idx)
+bool FeedService::takeCountsScan(int idx)
+{
+    if (idx < 0 || idx >= m_poll.size())
+        return true;
+    const bool manual = m_poll[idx].manual;
+    m_poll[idx].manual = false;
+    return !manual;
+}
+
+void FeedService::finishPoll(int idx, bool countsScan)
 {
     emit siteUpdated(idx);
 
-    if (m_scanQueueRemaining > 0) {
+    if (countsScan && m_scanQueueRemaining > 0) {
         --m_scanQueueRemaining;
         ++m_scanDone;
         if (m_scanQueueRemaining == 0) {

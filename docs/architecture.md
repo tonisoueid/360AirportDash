@@ -126,6 +126,19 @@ console always boots.
   `MainWindow` refreshes every card on it.
 - **Boards stamp**: `SiteData::boardsFetchedUtc` is set in `applySample` only
   when at least one board is measured (`known`); a failure never touches it.
+- **Board window**: each measured `FlightBoard` carries `windowBeginUtc` /
+  `windowEndUtc`, the begin/end actually sent for that board (departures and
+  arrivals separately). Both are invalid for an unknown board or a
+  hand-built sample — never invented. `boardWindowLabel()` renders
+  "hour ending 09:15Z" / "24 h ending 09:15Z" from them (empty if unknown).
+- **Row helpers** (`SiteData.h`): `cellCallsign/Icao24/From/To/FirstSeen/
+  LastSeen` return "—" for any empty/invalid field; `flightStatus()` derives
+  its string only from `firstSeen`/`lastSeen` as reported ("—" if absent or
+  inconsistent).
+- **`refreshSite(int idx)`**: starts a real re-poll of one airport; returns
+  false (no-op) for a bad index, a poll already in flight, or an active 429
+  pause. It is flagged manual so it never counts toward scan progress.
+  Callers must not invoke it under `--offline`.
 
 ### Card badge state (`cardBadge(SiteData, paused)`)
 
