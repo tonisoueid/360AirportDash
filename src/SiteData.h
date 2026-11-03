@@ -54,7 +54,71 @@ struct FlightEntry {
 struct FlightBoard {
     bool known = false;
     QVector<FlightEntry> flights;
+    // The begin/end actually queried for this board (UTC). Both invalid when
+    // unknown; set only by the feed from a real request, never invented.
+    QDateTime windowBeginUtc;
+    QDateTime windowEndUtc;
 };
+
+inline bool boardWindowKnown(const FlightBoard &b)
+{
+    return b.known && b.windowBeginUtc.isValid() && b.windowEndUtc.isValid()
+        && b.windowEndUtc > b.windowBeginUtc;
+}
+
+// "hour ending 09:15Z" / "24 h ending 09:15Z" from the stored window; empty
+// when the board or its window is unknown.
+inline QString boardWindowLabel(const FlightBoard &b)
+{
+    if (!boardWindowKnown(b))
+        return QString();
+    const qint64 secs = b.windowBeginUtc.secsTo(b.windowEndUtc);
+    const QString end = b.windowEndUtc.toUTC().toString(QStringLiteral("HH:mm")) + QLatin1Char('Z');
+    QString len;
+    if (secs == 3600)
+        return QStringLiteral("hour ending ") + end;
+    if (secs % 3600 == 0)
+        len = QStringLiteral("%1 h").arg(secs / 3600);
+    else if (secs % 60 == 0)
+        len = QStringLiteral("%1 min").arg(secs / 60);
+    else
+        len = QStringLiteral("%1 s").arg(secs);
+    return len + QStringLiteral(" ending ") + end;
+}
+
+// Table-cell formatters: "\u2014" for any empty / invalid field.
+inline QString cellText(const QString &s)
+{
+    const QString t = s.trimmed();
+    return t.isEmpty() ? QStringLiteral("\u2014") : t;
+}
+inline QString cellTime(const QDateTime &t)
+{
+    return t.isValid() ? t.toUTC().toString(QStringLiteral("HH:mm")) + QLatin1Char('Z')
+                       : QStringLiteral("\u2014");
+}
+inline QString cellCallsign(const FlightEntry &e) { return cellText(e.callsign); }
+inline QString cellIcao24(const FlightEntry &e)   { return cellText(e.icao24); }
+inline QString cellFrom(const FlightEntry &e)     { return cellText(e.estDepartureIcao); }
+inline QString cellTo(const FlightEntry &e)       { return cellText(e.estArrivalIcao); }
+inline QString cellFirstSeen(const FlightEntry &e){ return cellTime(e.firstSeen); }
+inline QString cellLastSeen(const FlightEntry &e) { return cellTime(e.lastSeen); }
+
+// Status derived ONLY from what the feed reported in firstSeen/lastSeen.
+// Anything unreported or inconsistent -> "\u2014" (never a guess).
+inline QString flightStatus(const FlightEntry &e)
+{
+    const bool f = e.firstSeen.isValid(), l = e.lastSeen.isValid();
+    if (f && l) {
+        if (e.lastSeen < e.firstSeen)
+            return QStringLiteral("\u2014");
+        return e.lastSeen == e.firstSeen ? QStringLiteral("Single sighting")
+                                         : QStringLiteral("Tracked");
+    }
+    if (f) return QStringLiteral("First seen only");
+    if (l) return QStringLiteral("Last seen only");
+    return QStringLiteral("\u2014");
+}
 
 // One measurement of one site. Doubles start NaN, ints start -1; every
 // consumer must check before use.
