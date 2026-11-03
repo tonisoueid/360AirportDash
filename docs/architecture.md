@@ -1,0 +1,124 @@
+# Architecture
+
+A polled-telemetry operations console: an editable roster of watched sites,
+a staggered polling service, a rule engine whose events log raise and clear,
+and a fully custom-painted dark UI. One executable, no runtime dependencies
+beyond Qt 6 (Widgets + Network).
+
+## Data flow (one direction only)
+
+```
+SiteRegistry ──► FeedService ──► MainWindow ──► SiteCard / TrendChart / EventLog
+   (roster)      (polling)       (wiring:
+                                  timers, alert
+                                  diffing, selection)
+```
+
+Nothing downstream reaches back up. `SiteRegistry` owns the roster and
+persists it; `FeedService` turns roster entries into `SiteData` samples;
+`MainWindow` wires signals to widgets and diffs watch rules; the widgets
+only paint what they are handed.
+
+## Source map
+
+| File | Role |
+|---|---|
+| `src/SiteData.h` | Data model (`Site`, `Sample`, `SiteData`), default roster, watch rules (`evaluateAlerts`). Everything downstream follows its missing-data convention. |
+| `src/SiteRegistry.{h,cpp}` | Editable roster persisted as `sites.json` in `QStandardPaths::AppConfigLocation`. `setSites()` normalizes → validates → persists (`QSaveFile`) → emits. |
+| `src/FeedService.{h,cpp}` | Round-robin polling, one in-flight request per site, staggered `kStaggerMs` apart, full sweep every `kRefreshSecs`. **Ships as a documented stub — the feed seam.** |
+| `src/MainWindow.{h,cpp}` | Owns the timers; diffs `evaluateAlerts` between samples so the event log records raise, severity change and clear ("…nominal"). Hotkeys, selection, panel focus. |
+| `src/SiteCard.{h,cpp}` | Per-site instrument tile, custom `QPainter`. |
+| `src/widgets/TrendChart.{h,cpp}` | Dual-scale history trace for the selected site. |
+| `src/EventLog.{h,cpp}` | Timestamped UTC log, capped at 300 lines. |
+| `src/AdminDialog.{h,cpp}` | Roster editor (table + form). Only stylesheet user. |
+| `src/widgets/Panel`, `ExpandButton`, `BodySplitter` | Captioned card chrome, caption-corner expand, draggable body seam. |
+| `src/widgets/IconGlyph.h` | Deterministic SVG-path parser + verbatim Bootstrap Icons artwork. |
+| `src/Theme.h` | Palette, typography, drawing primitives — the design system. |
+| `src/AppIcon.h` | Painted app icon (no bitmap assets anywhere). |
+
+## The patterns worth keeping intact
+
+### Missing-data convention
+
+Every measurement starts NaN (doubles) or -1 (ints). The UI renders explicit
+gaps — `---`, dashed baselines, "AWAITING FIRST SCAN" — and never zero.
+Check `std::isnan` / `< 0` before using any value. A feed that omits a field
+must leave it invalid; nothing downstream may invent a reading.
+
+### Staggered sweep, degraded-not-dropped
+
+`FeedService` walks the roster like a NOC polling telemetry stations:
+`pollSite(0)`, 450 ms later `pollSite(1)`, …, then the sweep is done and the
+next one is armed `kRefreshSecs` out. One request is in flight per site at
+most. On failure the site degrades — Live → **Stale** (last good sample
+retained, data age grows) or Pending → **Error** — and the header LINK chip
+flips. Recovery is symmetric. To change the sweep interval edit **only**
+`kRefreshSecs` (the status-bar countdown reads it).
+
+### Generation counter (retires superseded replies)
+
+The roster is hot-swappable at runtime. `setSites()` bumps `m_generation`;
+every in-flight network reply captured the generation it was issued under
+and drops itself if the number moved — the reply's site index no longer
+names the site that was polled. The same pattern guards any async lookup
+you add — search-as-you-type fields, secondary feeds, anything where a
+reply can outlive the state that issued it. Consequences:
+
+- Samples survive a roster edit when the site's `code` **and** `endpoint`
+  are unchanged.
+- **Site indexes change after a swap (`sitesReconfigured`) — never cache an
+  index across it.**
+
+### History window
+
+`applySample()` appends to `SiteData::recent`, capped at `kHistoryCap`
+(default 48). Everything historical — card sparkline, trend chart, trend
+watch rules — reads that window; nothing else keeps its own buffer.
+
+### Alert diffing (raise / severity-change / clear)
+
+`evaluateAlerts()` is a pure function of one `SiteData`. `MainWindow`
+stores the last result per site keyed by the rule's stable `key` and diffs:
+
+- new key → log the raise,
+- same key, different severity → log "raised to CRITICAL" / "lowered to
+  WARNING",
+- vanished key → log "<rule> nominal".
+
+This is why alert **keys must be stable identifiers** and changing values
+belong in the message, not the key. Derived/forecast-style rules
+(early warnings computed from history) follow the same diffing but log at
+their own level — see docs/recipes.md "Add a derived-rule class".
+
+### Persistence
+
+`SiteRegistry` writes `sites.json` (versioned object, `QSaveFile` so a
+crash never truncates it) under `AppConfigLocation`
+(`~/.config/<appname>/` on Linux, `%APPDATA%` on Windows). A corrupt or
+invalid file falls back to the built-in defaults and logs a WARN — the
+console always boots.
+
+### Calm UI
+
+Cards repaint on data updates and a minute tick, not per second; the only
+things that move at 1 Hz or faster live in the window header (UTC clock,
+blinking LIVE dot, scan counter). New card elements must stay static
+between minute ticks and data updates.
+
+## Verifying without a GUI
+
+Built-in headless modes (always `QT_QPA_PLATFORM=offscreen`):
+
+- `--offline` — link-down drill, no polling, `R` disabled
+- `--grab FILE` — render one frame after the first scan completes
+  (30 s fallback exit; give `--offline --grab` runs an outer timeout ≥ 45 s)
+- `--grab-admin PREFIX` — scripted admin-dialog add + save, screenshots to
+  `PREFIX-*.png`
+- `--icon FILE` — render the 256 px app icon
+
+For interaction or data-path testing, write an ad-hoc CMake harness in
+`/tmp` that links the real widgets from `src/`, drives them directly (e.g.
+`FeedService::applySample()` with synthetic samples) and grabs full windows
+— a bare `widget->grab()` shows alpha-garbage at transparent edges, so host
+the widget in an opaque window first. This repo was validated exactly that
+way; keep the habit.

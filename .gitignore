@@ -1,0 +1,19 @@
+# Build output
+build/
+dist/
+
+# Qt Creator / CMake user files
+*.user
+*.user.*
+CMakeUserPresets.json
+compile_commands.json
+
+# Runtime roster (lives in QStandardPaths AppConfigLocation, never the repo;
+# kept here defensively in case a variant ever writes next to the binary)
+sites.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*~
+*.swp

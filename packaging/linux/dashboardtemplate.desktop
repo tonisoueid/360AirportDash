@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DashboardTemplate
+GenericName=Telemetry Dashboard
+Comment=Multi-site telemetry operations console (Qt 6 template)
+Exec=DashboardTemplate
+Icon=dashboardtemplate
+Terminal=false
+Categories=Utility;Monitor;
+StartupWMClass=dashboardtemplate
