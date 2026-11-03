@@ -109,3 +109,17 @@ bright-pixel spans instead:
   Missing city/country render `---` in `TextMuted`. Badge colors: LIVE green,
   QUIET Info blue, STALE and PAUSED Warn amber, ERROR Crit red; Pending is a
   dashed `---` chip, not a status. Re-measure after any font or layout change.
+
+### Airport detail pane (header collision zones)
+
+`DetailPane` header is a fixed 124 px band over the shared filter field and the
+two FlightTables; content spans x = 14…width−14. Measured bright-pixel bands
+(700 px-wide host, y relative to the pane): name (16 px bold) + REFRESH pill
+y≈11–37 (pill right-aligned, 96×26); `ICAO · IATA · city, country` y≈47–61;
+provider chip + `LOCAL HH:MM ZONE` y≈68–91 (time omitted without a valid IANA
+zone); `ARRIVALS … · DEPARTURES …` window line y≈102–114 (`window ---` when the
+board's window is unknown); filter frame from y=126 (BorderHi border, excluded).
+Provider chip: Blue = authenticated, TextMuted = anonymous. Disabled REFRESH
+(offline / 429 pause) paints TextFaint with no hover fill. Empty state is a
+centred "No airport selected" pair of lines. Re-measure after any font or
+layout change.

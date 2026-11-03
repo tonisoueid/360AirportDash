@@ -36,6 +36,8 @@ add_executable(360AirportDash
     src/widgets/TrendChart.cpp
     src/widgets/FlightTable.h
     src/widgets/FlightTable.cpp
+    src/widgets/DetailPane.h
+    src/widgets/DetailPane.cpp
     src/SiteCard.h
     src/SiteCard.cpp
     src/EventLog.h

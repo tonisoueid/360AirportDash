@@ -98,6 +98,15 @@ window). Short version:
 - **`src/widgets/FlightTable`** — custom-painted sortable/filterable/virtualized
   table for one `FlightBoard` (`setBoard(ptr, mode)`, `setFilter`, `refreshTick`);
   model rebuilt on change, paints visible rows only, explicit gap vs empty states.
+- **`src/widgets/DetailPane`** — "Airport Detail" panel for the selected site:
+  painted header (name, ICAO/IATA, local time, OpenSky anonymous/authenticated
+  badge, stored board-window labels, REFRESH button), shared filter field, and
+  Arrivals + Departures `FlightTable`s. Pure view of stored `current` boards:
+  `MainWindow::selectSite()/refreshDetail()` feed it (selection never fetches);
+  REFRESH only emits `refreshRequested` → `FeedService::refreshSite()`, and the
+  pane changes only when `siteUpdated` lands. Bound by ICAO and re-bound by
+  code after `sitesReconfigured` (removed site → empty state). Anonymous mode
+  shows the arrivals gap with its reason. Refresh disabled offline / during a 429 pause.
 - **`src/SiteRegistry`** — roster persisted as `sites.json` (QSaveFile,
   corrupt → defaults). **Site indexes change after a swap
   (`sitesReconfigured`) — never cache indexes across it.**
