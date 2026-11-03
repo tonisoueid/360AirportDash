@@ -17,7 +17,7 @@ FeedService::FeedService(const QVector<Site> &sites, QObject *parent)
 {
     m_data.reserve(sites.size());
     for (const Site &s : sites)
-        m_data.push_back(SiteData{s, {}, {}, SiteData::State::Pending, {}, {}});
+        m_data.push_back(SiteData{s, {}, SiteData::State::Pending, {}, {}});
 
     m_net.setTransferTimeout(9000);
     m_baseUrl = QStringLiteral("https://opensky-network.org/api");
@@ -347,9 +347,6 @@ void FeedService::applySample(int idx, const Sample &s)
     d.current = s;
     if (!s.stampUtc.isValid())
         d.current.stampUtc = QDateTime::currentDateTimeUtc();
-    d.recent.push_back(d.current);
-    if (d.recent.size() > SiteData::kHistoryCap)
-        d.recent.remove(0, d.recent.size() - SiteData::kHistoryCap);
     d.error.clear();
     d.lastSyncUtc = QDateTime::currentDateTimeUtc();
     if (s.arrivals.known || s.departures.known)

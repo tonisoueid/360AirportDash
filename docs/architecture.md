@@ -72,12 +72,6 @@ reply can outlive the state that issued it. Consequences:
 - **Site indexes change after a swap (`sitesReconfigured`) — never cache an
   index across it.**
 
-### History window
-
-`applySample()` appends to `SiteData::recent`, capped at `kHistoryCap`
-(default 48). Everything historical — trend
-watch rules — reads that window; nothing else keeps its own buffer.
-
 ### Alert diffing (raise / severity-change / clear)
 
 `evaluateAlerts()` is a pure function of one `SiteData`. `MainWindow`

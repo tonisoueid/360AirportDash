@@ -11,9 +11,9 @@
 // dashed baseline) until a real sample arrives from the feed. Never fake a
 // reading — this is the template's core invariant.
 //
-// The example payload is a node-health style sample (load / latency /
-// sessions). Rename these fields to your domain; everything downstream
-// (card rows, chart series, alert rules) follows the same NaN convention.
+// The payload is the per-site flight boards (arrivals / departures). Add
+// fields for your domain the same way; everything downstream (card rows,
+// alert rules) follows the same NaN convention.
 // See docs/recipes.md "Add a data domain".
 // ----------------------------------------------------------------------------
 
@@ -124,9 +124,6 @@ inline QString flightStatus(const FlightEntry &e)
 // consumer must check before use.
 struct Sample {
     QDateTime stampUtc;               // when the feed says it was measured
-    double loadPct    = std::nan(""); // primary metric, 0–100
-    double latencyMs  = std::nan(""); // network / secondary metric
-    int    sessions   = -1;           // tertiary count
     FlightBoard arrivals;             // default: unknown (known=false)
     FlightBoard departures;           // default: unknown (known=false)
 };
@@ -134,9 +131,6 @@ struct Sample {
 struct SiteData {
     Site site;
     Sample current;                   // last applied sample (any state)
-    QVector<Sample> recent;           // trailing history, newest last
-
-    static constexpr int kHistoryCap = 48;   // samples retained per site
 
     enum class State { Pending, Live, Stale, Error };
     State state = State::Pending;
@@ -151,21 +145,6 @@ struct SiteData {
     // Seconds since the site last answered the poll; -1 when never.
     int ageSecs() const
     { return lastSyncUtc.isValid() ? int(lastSyncUtc.secsTo(QDateTime::currentDateTimeUtc())) : -1; }
-
-    // Primary-metric trend: newest minus oldest of the last 3 valid samples
-    // (NaN when the history is too short) — the input for trend-style watch
-    // rules. Signed: a falling metric yields a negative delta.
-    double loadTrend3() const
-    {
-        QVector<double> v;
-        v.reserve(3);
-        for (int i = recent.size() - 1; i >= 0 && v.size() < 3; --i)
-            if (!std::isnan(recent[i].loadPct))
-                v.push_back(recent[i].loadPct);      // newest first
-        if (v.size() < 3)
-            return std::nan("");
-        return v.front() - v.back();
-    }
 };
 
 // ----------------------------------------------------------------------------
@@ -249,21 +228,7 @@ inline QVector<Alert> evaluateAlerts(const SiteData &d)
 {
     QVector<Alert> out;
     const auto add = [&](Alert::Sev s, QString key, QString msg) { out.push_back({s, key, msg}); };
-    const Sample &c = d.current;
+    (void)d; (void)add;   // no shipped rules: the feed carries only flight boards
 
-    if (!std::isnan(c.loadPct)) {
-        if (c.loadPct >= 90)      add(Alert::Sev::Crit, "LOAD", QStringLiteral("CRITICAL LOAD %1%").arg(c.loadPct, 0, 'f', 0));
-        else if (c.loadPct >= 75) add(Alert::Sev::Warn, "LOAD", QStringLiteral("HIGH LOAD %1%").arg(c.loadPct, 0, 'f', 0));
-    }
-    if (!std::isnan(c.latencyMs)) {
-        if (c.latencyMs >= 1000)      add(Alert::Sev::Crit, "LATENCY", QStringLiteral("LATENCY %1 MS").arg(qRound(c.latencyMs)));
-        else if (c.latencyMs >= 400)  add(Alert::Sev::Warn, "LATENCY", QStringLiteral("LATENCY %1 MS").arg(qRound(c.latencyMs)));
-    }
-    // Trend rule over the trailing history — the pattern for "rate of
-    // change" watches (mirrors the original template's pressure-trend rule).
-    const double rise = d.loadTrend3();
-    if (!std::isnan(rise) && rise >= 25.0)
-        add(Alert::Sev::Warn, "LOADRISE",
-            QStringLiteral("LOAD RISING +%1 PTS OVER LAST 3 SAMPLES").arg(rise, 0, 'f', 0));
     return out;
 }
