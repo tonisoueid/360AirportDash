@@ -4,7 +4,9 @@
 #
 #   scripts/rename-project.sh NewName [lowercase-id]
 #
-# NewName        PascalCase project/target name, e.g. FleetConsole
+# NewName        project/target name, e.g. FleetConsole or 360Console
+#                (letters, digits, _ and -; may start with a digit — the
+#                extraction-origin app itself was a digit-leading target)
 # lowercase-id   optional; defaults to NewName lowercased. Used for the
 #                .desktop file, icon name, Wayland app id and config dir.
 #
@@ -31,8 +33,8 @@ if [ "${1:-}" = "--no-verify" ]; then VERIFY=0; shift; NEW_PC="${1:?usage: scrip
 if [ "${2:-}" = "--no-verify" ]; then VERIFY=0; fi
 NEW_LC="${2:-}"
 
-if ! [[ "$NEW_PC" =~ ^[A-Za-z][A-Za-z0-9_-]*$ ]]; then
-    echo "error: NewName must start with a letter and contain only letters/digits/_/-" >&2
+if ! [[ "$NEW_PC" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]; then
+    echo "error: NewName may contain only letters/digits/_/- (and may start with a digit)" >&2
     exit 1
 fi
 if [ -z "$NEW_LC" ]; then
