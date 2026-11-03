@@ -84,8 +84,7 @@ offscreen) in the container before it is written. macOS is not a target.
 Data flows one way: `SiteRegistry` (roster) → `FeedService` (polling) →
 `MainWindow` (alert diffing, wiring) → `SiteCard` (one per airport) / `DetailPane` / `EventLog`
 (painting). Details and rationale: **docs/architecture.md** (patterns: the
-feed seam, generation counter, stale semantics, alert diffing, history
-window). Short version:
+feed seam, generation counter, stale semantics, alert diffing). Short version:
 
 - **`src/SiteData.h`** — shared header: data model, default roster, watch
   rules (`evaluateAlerts`). To add or tune an alert, edit it here.

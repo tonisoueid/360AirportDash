@@ -393,9 +393,7 @@ void MainWindow::onSiteUpdated(int idx)
         && !m_announcedOnline[idx]) {
         m_announcedOnline[idx] = true;
         m_log->log(QStringLiteral("INFO"), d.site.code,
-                   QStringLiteral("Site online — load %1% · latency %2 ms")
-                       .arg(QString::number(d.current.loadPct, 'f', 1),
-                            QString::number(d.current.latencyMs, 'f', 0)));
+                   QStringLiteral("Site online"));
         m_eventCount = m_eventCount + 1;
     }
     runAlertRules(idx);

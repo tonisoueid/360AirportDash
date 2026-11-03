@@ -101,7 +101,7 @@ each names the exact seams:
 - **Wire a feed** — `FeedService::pollSite()` is already wired to OpenSky;
   replace it to use another source. `applySample()` / `applyFailure()` do
   the rest.
-- **Add a data domain** — model field → feed parse → card row → chart
+- **Add a data domain** — model field → feed parse → card row →
   series → watch rule, with a claimed accent.
 - **Add a watch rule** — a guarded threshold in `evaluateAlerts()` with a
   stable key; the log handles raise/severity/clear.

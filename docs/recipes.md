@@ -41,9 +41,9 @@ void FeedService::pollSite(int idx)
 ```
 
 That's the whole wiring: `applySample()` marks the site Live, stamps the
-sync clock, appends to the capped history, flips the link flag and runs
+sync clock, flips the link flag and runs
 the scan-queue bookkeeping; `applyFailure()` degrades to Stale/Error and
-keeps the last good sample. Cards, chart, alert rules and the event log
+keeps the last good sample. Cards, alert rules and the event log
 light up with no further changes.
 
 **Parsing** — same file, static helper. Keep the convention: fields the
@@ -55,9 +55,8 @@ static Sample parseBody(const QByteArray &body)
     Sample s;
     s.stampUtc = QDateTime::currentDateTimeUtc();
     const QJsonObject o = QJsonDocument::fromJson(body).object();
-    if (o.contains("load"))        s.loadPct   = o.value("load").toDouble(std::nan(""));
-    if (o.contains("latency_ms"))  s.latencyMs = o.value("latency_ms").toDouble(std::nan(""));
-    if (o.contains("sessions"))    s.sessions  = o.value("sessions").toInt(-1);
+    if (o.contains("temp_c"))      s.tempC     = o.value("temp_c").toDouble(std::nan(""));
+    if (o.contains("queue"))       s.queueLen  = o.value("queue").toInt(-1);
     return s;
 }
 ```
@@ -129,9 +128,6 @@ Rules of the road:
   data.
 - Same key at two severities = one rule that escalates; different keys =
   independent rules that can coexist.
-
-**Trend rules** read the history window: see `LOADRISE` in the shipped
-rules and `SiteData::loadTrend3()` for the delta-over-last-N pattern.
 
 **Derived-rule classes** (optional): rules computed ahead of the current
 sample — "latency will exceed 400 ms within N samples" — belong in a
