@@ -21,6 +21,8 @@ add_executable(360AirportDash
     src/AirportRegistry.cpp
     src/SiteRegistry.h
     src/SiteRegistry.cpp
+    src/OpenSkyAuth.h
+    src/OpenSkyAuth.cpp
     src/OpenSkyParse.h
     src/OpenSkyParse.cpp
     src/FeedService.h
